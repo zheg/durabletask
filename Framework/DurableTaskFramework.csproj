@@ -110,6 +110,9 @@
     <Compile Include="Tracking\AzureTableOrchestrationJumpStartEntity.cs" />
     <Compile Include="TrackingWorkItem.cs" />
     <Compile Include="Tracking\AzureTableInstanceStore.cs" />
+    <Compile Include="Tracking\BlobStorageClient.cs" />
+    <Compile Include="Tracking\BlobStorageClientHelper.cs" />
+    <Compile Include="Tracking\IServiceBusMessageStore.cs" />
     <Compile Include="Tracking\JumpStartManager.cs" />
     <Compile Include="Tracking\InstanceEntityBase.cs" />
     <Compile Include="Tracking\OrchestrationJumpStartInstanceEntity.cs" />

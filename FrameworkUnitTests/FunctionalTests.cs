@@ -702,7 +702,7 @@ namespace FrameworkUnitTests
                 "UberOrchestration",
                 "V1",
                 "TestInstance",
-                new TestOrchestrationInput { Iterations = numSubOrchestrations, Payload = GeneratePayLoad(90 * 1024) });
+                new TestOrchestrationInput { Iterations = numSubOrchestrations, Payload = TestUtils.GenerateRandomString(90 * 1024) });
 
             // Waiting for 60 seconds guarantees that to pass the orchestrations must run in parallel
             bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, instance, 60);
@@ -728,7 +728,7 @@ namespace FrameworkUnitTests
                 "SleeperSubOrchestration",
                 "V1",
                 $"{UberOrchestration.ChildWorkflowIdBase}_{i}",
-                new TestOrchestrationInput { Iterations = 1, Payload = GeneratePayLoad(8 * 1024) }));
+                new TestOrchestrationInput { Iterations = 1, Payload = TestUtils.GenerateRandomString(8 * 1024) }));
             }
 
             IList<OrchestrationInstance> orchestrationInstances = (await Task.WhenAll(orchestrations)).ToList();
@@ -741,18 +741,6 @@ namespace FrameworkUnitTests
 
             var finalResults = await Task.WhenAll(orchestrationResults);
             Assert.AreEqual(numSubOrchestrations, finalResults.Count(status => status.OrchestrationStatus == OrchestrationStatus.Completed));
-        }
-
-        private static string GeneratePayLoad(int length)
-        {
-            var result = new StringBuilder(length);
-            while (result.Length < length)
-            {
-                // Use Guids so these don't compress well
-                result.Append(Guid.NewGuid().ToString("N"));
-            }
-
-            return result.ToString(0, length);
         }
 
         class TestOrchestrationInput
@@ -786,7 +774,7 @@ namespace FrameworkUnitTests
                         "SleeperSubOrchestration",
                         "V1",
                         $"{ChildWorkflowIdBase}_{i}",
-                        new TestOrchestrationInput { Iterations = 1, Payload = GeneratePayLoad(8 * 1024) }));
+                        new TestOrchestrationInput { Iterations = 1, Payload = TestUtils.GenerateRandomString(8 * 1024) }));
                 }
 
                 int[] data = await Task.WhenAll(tasks);

@@ -12,6 +12,7 @@
 //  ----------------------------------------------------------------------------------
 
 using System.Collections.Generic;
+using DurableTask.Tracking;
 
 namespace DurableTask.Common
 {
@@ -28,14 +29,15 @@ namespace DurableTask.Common
     {
         public static BrokeredMessage GetBrokeredMessageFromObject(object serializableObject, CompressionSettings compressionSettings)
         {
-            return GetBrokeredMessageFromObject(serializableObject, compressionSettings, null, null);
+            return GetBrokeredMessageFromObject(serializableObject, compressionSettings, null, null, null);
         }
 
         public static BrokeredMessage GetBrokeredMessageFromObject(
             object serializableObject,
             CompressionSettings compressionSettings,
             OrchestrationInstance instance,
-            string messageType)
+            string messageType,
+            IServiceBusMessageStore serviceBusMessageStore)
         {
             if (serializableObject == null)
             {
@@ -61,16 +63,36 @@ namespace DurableTask.Common
                      rawStream.Length > compressionSettings.ThresholdInBytes))
                 {
                     Stream compressedStream = Utils.GetCompressedStream(rawStream);
-
-                    brokeredMessage = new BrokeredMessage(compressedStream, true);
-                    brokeredMessage.Properties[FrameworkConstants.CompressionTypePropertyName] =
-                        FrameworkConstants.CompressionTypeGzipPropertyValue;
-
                     var rawLen = rawStream.Length;
                     TraceHelper.TraceInstance(TraceEventType.Information, instance,
                         () =>
-                            "Compression stats for " + (messageType ?? string.Empty) + " : " + brokeredMessage.MessageId +
+                            "Compression stats for " + (messageType ?? string.Empty) + " : " +
+                            brokeredMessage.MessageId +
                             ", uncompressed " + rawLen + " -> compressed " + compressedStream.Length);
+
+                    if (compressedStream.Length < FrameworkConstants.MaxMessageSizeInBytes)
+                    {
+                        brokeredMessage = new BrokeredMessage(compressedStream, true);
+                        brokeredMessage.Properties[FrameworkConstants.CompressionTypePropertyName] =
+                            FrameworkConstants.CompressionTypeGzipPropertyValue;
+                    }
+                    else if (serviceBusMessageStore != null)
+                    {
+                        // save the compressed stream using external storage when it is larger
+                        // than the supported message size limit.
+                        // the message is stored using the generated key, which is saved in the message property.
+                        string storageKey = serviceBusMessageStore.BuildMessageStorageKey(instance);
+                        serviceBusMessageStore.SaveSteamMessageWithKey(storageKey, compressedStream);
+                        brokeredMessage = new BrokeredMessage();
+                        brokeredMessage.Properties[FrameworkConstants.MessageStorageKey] = storageKey;
+                        brokeredMessage.Properties[FrameworkConstants.CompressionTypePropertyName] =
+                            FrameworkConstants.CompressionTypeGzipPropertyValue;
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"The compressed message is larger than supported. " +
+                                                    $"Please provide an implementation of IServiceBusMessageStore for external storage.", nameof(IServiceBusMessageStore));
+                    }
                 }
                 else
                 {
@@ -95,7 +117,7 @@ namespace DurableTask.Common
             }
         }
 
-        public static async Task<T> GetObjectFromBrokeredMessageAsync<T>(BrokeredMessage message)
+        public static async Task<T> GetObjectFromBrokeredMessageAsync<T>(BrokeredMessage message, IServiceBusMessageStore serviceBusMessageStore)
         {
             if (message == null)
             {
@@ -120,7 +142,7 @@ namespace DurableTask.Common
             else if (string.Equals(compressionType, FrameworkConstants.CompressionTypeGzipPropertyValue,
                 StringComparison.OrdinalIgnoreCase))
             {
-                using (var compressedStream = message.GetBody<Stream>())
+                using (var compressedStream = await GetCompressedStream(message, serviceBusMessageStore))
                 {
                     if (!Utils.IsGzipStream(compressedStream))
                     {
@@ -151,6 +173,30 @@ namespace DurableTask.Common
             }
 
             return deserializedObject;
+        }
+
+        static async Task<Stream> GetCompressedStream(BrokeredMessage message, IServiceBusMessageStore serviceBusMessageStore)
+        {
+            object storageKeyObj = null;
+            string storageKey = string.Empty;
+
+            if (message.Properties.TryGetValue(FrameworkConstants.MessageStorageKey, out storageKeyObj))
+            {
+                storageKey = (string)storageKeyObj;
+            }
+            if (string.IsNullOrEmpty(storageKey))
+            {
+                return message.GetBody<Stream>();
+            }
+
+            // if the storage key is set in the message property,
+            // load the stream message from the service bus message store.
+            if (serviceBusMessageStore == null)
+            {
+                throw new ArgumentException($"Failed to load compressed message from external storage with key: {storageKey}. Please provide an implementation of IServiceBusMessageStore for external storage.", nameof(IServiceBusMessageStore));
+            }
+            return await serviceBusMessageStore.LoadSteamMessageWithKey(storageKey);
+
         }
 
         public static void CheckAndLogDeliveryCount(string sessionId, IEnumerable<BrokeredMessage> messages, int maxDeliverycount)

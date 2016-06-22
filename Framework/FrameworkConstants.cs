@@ -56,6 +56,12 @@ namespace DurableTask
         public const string CompressionTypeGzipPropertyValue = "gzip";
         public const string CompressionTypeNonePropertyValue = "none";
 
+        // service bus message storage key in message property
+        public const string MessageStorageKey = "messageStorageKey";
+
+        // the max allowed message size after compression in service bus
+        public const int MaxMessageSizeInBytes = 230 * 1024;
+
         // instance store constants
         public const int MaxStringLengthForAzureTableColumn = 1024 * 15; // cut off at 15k * 2 bytes 
     }

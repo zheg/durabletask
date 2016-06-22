@@ -11,6 +11,8 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
+using System.IO;
+
 namespace DurableTask.Tracking
 {
     using System;
@@ -26,7 +28,7 @@ namespace DurableTask.Tracking
     /// <summary>
     /// Azure Table Instance store provider to allow storage and lookup for orchestration state event history with query support
     /// </summary>
-    public class AzureTableInstanceStore : IOrchestrationServiceInstanceStore
+    public class AzureTableInstanceStore : IOrchestrationServiceInstanceStore, IServiceBusMessageStore
     {
         const int MaxDisplayStringLengthForAzureTableColumn = (1024 * 24) - 20;
         const int MaxRetriesTableStore = 5;
@@ -35,6 +37,7 @@ namespace DurableTask.Tracking
         static readonly DataConverter DataConverter = new JsonDataConverter();
 
         readonly AzureTableClient tableClient;
+        readonly BlobStorageClient blobClient;
 
         /// <summary>
         /// Creates a new AzureTableInstanceStore using the supplied hub name and table connection string
@@ -44,6 +47,7 @@ namespace DurableTask.Tracking
         public AzureTableInstanceStore(string hubName, string tableConnectionString)
         {
             this.tableClient = new AzureTableClient(hubName, tableConnectionString);
+            this.blobClient =  new BlobStorageClient(hubName, tableConnectionString);
         }
 
         /// <summary>
@@ -68,7 +72,7 @@ namespace DurableTask.Tracking
         public async Task DeleteStoreAsync()
         {
             await Task.WhenAll(this.tableClient.DeleteTableIfExistsAsync(),
-                this.tableClient.DeleteJumpStartTableIfExistsAsync());
+                this.tableClient.DeleteJumpStartTableIfExistsAsync(), this.blobClient.DeleteAllContainersAsync());
         }
 
         /// <summary>
@@ -272,6 +276,7 @@ namespace DurableTask.Tracking
         {
             TableContinuationToken continuationToken = null;
 
+            await this.blobClient.DeleteExpiredContainersAsync(thresholdDateTimeUtc);
             int purgeCount = 0;
             do
             {
@@ -440,6 +445,42 @@ namespace DurableTask.Tracking
             byte[] tokenBytes = Convert.FromBase64String(serializedContinuationToken);
 
             return DataConverter.Deserialize<TableContinuationToken>(Encoding.Unicode.GetString(tokenBytes));
+        }
+
+        /// <summary>
+        /// Create a storage key based on the orchestrationInstance.
+        /// This key will be used to save and load the stream message in external storage when it is too large.
+        /// </summary>
+        /// <param name="orchestrationInstance">The orchestration instance.</param>
+        /// <returns></returns>
+        public string BuildMessageStorageKey(OrchestrationInstance orchestrationInstance)
+        {
+            string id = Guid.NewGuid().ToString("N");
+            return string.Format("{1}{0}{2}{3}{4}{3}{5}", BlobStorageClientHelper.KeyDelimiter,
+              BlobStorageClientHelper.GetCurrentDateAsContainerSuffix(), orchestrationInstance.InstanceId,
+              BlobStorageClientHelper.BlobNameDelimiter,
+              orchestrationInstance.ExecutionId, id);
+        }
+
+        /// <summary>
+        /// Save the stream of the service bus message using key.
+        /// </summary>
+        /// <param name="key">The storage key.</param>
+        /// <param name="stream">The stream of the service bus message.</param>
+        /// <returns></returns>
+        public async Task SaveSteamMessageWithKey(string key, Stream stream)
+        {
+            await this.blobClient.UploadStreamBlob(key, stream);
+        }
+
+        /// <summary>
+        /// Load the stream message from storage using key.
+        /// </summary>
+        /// <param name="key">Teh storage key.</param>
+        /// <returns>The saved stream message.</returns>
+        public async Task<Stream> LoadSteamMessageWithKey(string key)
+        {
+            return await this.blobClient.DownloadStreamAsync(key);
         }
     }
 }
