@@ -11,8 +11,6 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
-using System.IO;
-
 namespace DurableTask.Tracking
 {
     using System;
@@ -24,6 +22,7 @@ namespace DurableTask.Tracking
     using DurableTask.Common;
     using DurableTask.Serializing;
     using Microsoft.WindowsAzure.Storage.Table;
+    using System.IO;
 
     /// <summary>
     /// Azure Table Instance store provider to allow storage and lookup for orchestration state event history with query support
