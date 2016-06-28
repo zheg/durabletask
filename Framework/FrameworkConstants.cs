@@ -57,7 +57,7 @@ namespace DurableTask
         public const string CompressionTypeNonePropertyValue = "none";
 
         // service bus message storage key in message property
-        public const string MessageStorageKey = "messageStorageKey";
+        public const string MessageStorageKey = "MessageStorageKey";
 
         // the max allowed message size after compression in service bus
         public const int MaxMessageSizeInBytes = 230 * 1024;

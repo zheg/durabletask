@@ -1,18 +1,32 @@
-﻿namespace DurableTask.Tracking
+﻿//  ----------------------------------------------------------------------------------
+//  Copyright Microsoft Corporation
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//  http://www.apache.org/licenses/LICENSE-2.0
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+//  ----------------------------------------------------------------------------------
+
+namespace DurableTask.Tracking
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Threading.Tasks;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
     using Microsoft.WindowsAzure.Storage.RetryPolicies;
-    using System.Collections.Generic;
-    using System.Linq;
 
     internal class BlobStorageClient
     {
         // use hubName as the container prefix. 
-        // the container full name is in the format of {hubName}-{DateTime};
+        // the container full name is in the format of {hubName}-{streamType}-{DateTime};
+        // the streamType is the type of the stream, either 'message' or 'session';
         // the date time is in the format of yyyyMMdd.
         readonly string hubName;
         readonly CloudBlobClient blobClient;
@@ -43,39 +57,28 @@
 
         public async Task UploadStreamBlob(string key, Stream stream)
         {
-            string dateString;
+            string containerNameSuffix;
             string blobName;
-            ParseKey(key, out dateString, out blobName);
-            var cloudBlob = await GetCloudBlockBlobReferenceAsync(dateString, blobName);
+            BlobStorageClientHelper.ParseKey(key, out containerNameSuffix, out blobName);
+            var cloudBlob = await GetCloudBlockBlobReferenceAsync(containerNameSuffix, blobName);
             await cloudBlob.UploadFromStreamAsync(stream);
         }
 
         public async Task<Stream> DownloadStreamAsync(string key)
         {
-            string dateString;
+            string containerNameSuffix;
             string blobName;
-            ParseKey(key, out dateString, out blobName);
+            BlobStorageClientHelper.ParseKey(key, out containerNameSuffix, out blobName);
 
-            var blob = await this.GetCloudBlockBlobReferenceAsync(dateString, blobName);
+            var cloudBlob = await this.GetCloudBlockBlobReferenceAsync(containerNameSuffix, blobName);
             Stream targetStream = new MemoryStream();
-            await blob.DownloadToStreamAsync(targetStream);
+            await cloudBlob.DownloadToStreamAsync(targetStream);
             return targetStream;
         }
 
-        void ParseKey(string key, out string dateString, out string blobName)
+        async Task<ICloudBlob> GetCloudBlockBlobReferenceAsync(string containerNameSuffix, string blobName)
         {
-            string[] segments = key.Split(BlobStorageClientHelper.KeyDelimiter);
-            if (segments.Length < 2)
-            {
-                throw new ArgumentException("storage key does not contain required 2 or more segments: {dateString}|{blobName}.", nameof(key));
-            }
-            dateString = segments[0];
-            blobName = key.Substring(dateString.Length + 1, key.Length - dateString.Length - 1);
-        }
-
-        async Task<ICloudBlob> GetCloudBlockBlobReferenceAsync(string dateString, string blobName)
-        {
-            string containerName = BlobStorageClientHelper.BuildContainerName(hubName, dateString);        
+            string containerName = BlobStorageClientHelper.BuildContainerName(hubName, containerNameSuffix);
             var cloudBlobContainer = blobClient.GetContainerReference(containerName);
             await cloudBlobContainer.CreateIfNotExistsAsync();
             return cloudBlobContainer.GetBlockBlobReference(blobName);

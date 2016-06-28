@@ -27,7 +27,7 @@ namespace DurableTask.Tracking
     /// <summary>
     /// Azure Table Instance store provider to allow storage and lookup for orchestration state event history with query support
     /// </summary>
-    public class AzureTableInstanceStore : IOrchestrationServiceInstanceStore, IServiceBusMessageStore
+    public class AzureTableInstanceStore : IOrchestrationServiceInstanceStore, IMessageSessionStore
     {
         const int MaxDisplayStringLengthForAzureTableColumn = (1024 * 24) - 20;
         const int MaxRetriesTableStore = 5;
@@ -71,7 +71,8 @@ namespace DurableTask.Tracking
         public async Task DeleteStoreAsync()
         {
             await Task.WhenAll(this.tableClient.DeleteTableIfExistsAsync(),
-                this.tableClient.DeleteJumpStartTableIfExistsAsync(), this.blobClient.DeleteAllContainersAsync());
+                this.tableClient.DeleteJumpStartTableIfExistsAsync(),
+                this.blobClient.DeleteAllContainersAsync());
         }
 
         /// <summary>
@@ -451,33 +452,33 @@ namespace DurableTask.Tracking
         /// This key will be used to save and load the stream message in external storage when it is too large.
         /// </summary>
         /// <param name="orchestrationInstance">The orchestration instance.</param>
-        /// <returns></returns>
-        public string BuildMessageStorageKey(OrchestrationInstance orchestrationInstance)
+        /// <param name="messageFireTime">The message fire time.</param>
+        /// <returns>The created storage key.</returns>
+        public string BuildMessageStorageKey(OrchestrationInstance orchestrationInstance, DateTime messageFireTime)
         {
-            string id = Guid.NewGuid().ToString("N");
-            return string.Format("{1}{0}{2}{3}{4}{3}{5}", BlobStorageClientHelper.KeyDelimiter,
-              BlobStorageClientHelper.GetCurrentDateAsContainerSuffix(), orchestrationInstance.InstanceId,
-              BlobStorageClientHelper.BlobNameDelimiter,
-              orchestrationInstance.ExecutionId, id);
+            return BlobStorageClientHelper.BuildMessageStorageKey(
+                orchestrationInstance.InstanceId,
+                orchestrationInstance.ExecutionId,
+                messageFireTime);
         }
 
         /// <summary>
-        /// Save the stream of the service bus message using key.
+        /// Save the stream of the message or seesion using key.
         /// </summary>
         /// <param name="key">The storage key.</param>
-        /// <param name="stream">The stream of the service bus message.</param>
+        /// <param name="stream">The stream of the message or session.</param>
         /// <returns></returns>
-        public async Task SaveSteamMessageWithKey(string key, Stream stream)
+        public async Task SaveStreamWithKeyAsync(string key, Stream stream)
         {
             await this.blobClient.UploadStreamBlob(key, stream);
         }
 
         /// <summary>
-        /// Load the stream message from storage using key.
+        /// Load the stream of message or seesion from storage using key.
         /// </summary>
         /// <param name="key">Teh storage key.</param>
-        /// <returns>The saved stream message.</returns>
-        public async Task<Stream> LoadSteamMessageWithKey(string key)
+        /// <returns>The saved stream message or session.</returns>
+        public async Task<Stream> LoadStreamWithKeyAsync(string key)
         {
             return await this.blobClient.DownloadStreamAsync(key);
         }

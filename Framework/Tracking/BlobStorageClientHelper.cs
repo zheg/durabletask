@@ -1,4 +1,17 @@
-﻿namespace DurableTask.Tracking
+﻿//  ----------------------------------------------------------------------------------
+//  Copyright Microsoft Corporation
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//  http://www.apache.org/licenses/LICENSE-2.0
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+//  ----------------------------------------------------------------------------------
+
+namespace DurableTask.Tracking
 {
     using System;
 
@@ -13,20 +26,46 @@
         // the delimiter shown in the blob name as the file path
         public static readonly char BlobNameDelimiter = '/';
 
-        public static string GetCurrentDateAsContainerSuffix()
+        public static string BuildMessageStorageKey(string instanceId, string executionId, DateTime messageFireTime)
         {
-            return DateTime.UtcNow.ToString(DateFormat);
+            string id = Guid.NewGuid().ToString("N");
+            return string.Format("message{0}{2}{1}{3}{4}{5}{4}{6}", ContainerDelimiter, KeyDelimiter,
+              GetDateStringForContainerName(messageFireTime),
+              instanceId,
+              BlobNameDelimiter,
+              executionId,
+              id);
+        }
+
+        // use the message fire time if it is set;
+        // otherwise, use the current utc time as the date string as part of the container name
+        static string GetDateStringForContainerName(DateTime messageFireTime)
+        {
+            return messageFireTime != DateTime.MinValue ?
+                messageFireTime.ToString(DateFormat) :
+                DateTime.UtcNow.ToString(DateFormat);
+        }
+
+        public static void ParseKey(string key, out string containerNameSuffix, out string blobName)
+        {
+            string[] segments = key.Split(BlobStorageClientHelper.KeyDelimiter);
+            if (segments.Length < 2)
+            {
+                throw new ArgumentException("storage key does not contain required 2 or more segments: {containerNameSuffix}|{blobName}.", nameof(key));
+            }
+            containerNameSuffix = segments[0];
+            blobName = key.Substring(containerNameSuffix.Length + 1, key.Length - containerNameSuffix.Length - 1);
         }
 
         public static bool IsContainerExpired(string containerName, DateTime thresholdDateTimeUtc)
         {
             string[] segments = containerName.Split(ContainerDelimiter);
-            if (segments.Length != 2)
+            if (segments.Length != 3)
             {
-                throw new ArgumentException("container name does not contain required 2 segments.", nameof(containerName));
+                throw new ArgumentException("container name does not contain required 3 segments.", nameof(containerName));
             }
 
-            DateTime containerDateTime = DateTime.ParseExact(segments[1], DateFormat, System.Globalization.CultureInfo.InvariantCulture);
+            DateTime containerDateTime = DateTime.ParseExact(segments[2], DateFormat, System.Globalization.CultureInfo.InvariantCulture);
             return containerDateTime < thresholdDateTimeUtc;
         }
 
