@@ -16,13 +16,13 @@ namespace DurableTask.Tracking
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
     using DurableTask.Common;
     using DurableTask.Serializing;
     using Microsoft.WindowsAzure.Storage.Table;
-    using System.IO;
 
     /// <summary>
     /// Azure Table Instance store provider to allow storage and lookup for orchestration state event history with query support
