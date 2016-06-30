@@ -27,7 +27,7 @@ namespace DurableTask.Tracking
     /// <summary>
     /// Azure Table Instance store provider to allow storage and lookup for orchestration state event history with query support
     /// </summary>
-    public class AzureTableInstanceStore : IOrchestrationServiceInstanceStore, IMessageSessionStore
+    public class AzureTableInstanceStore : IOrchestrationServiceInstanceStore, IBlobStore
     {
         const int MaxDisplayStringLengthForAzureTableColumn = (1024 * 24) - 20;
         const int MaxRetriesTableStore = 5;
@@ -445,6 +445,17 @@ namespace DurableTask.Tracking
             byte[] tokenBytes = Convert.FromBase64String(serializedContinuationToken);
 
             return DataConverter.Deserialize<TableContinuationToken>(Encoding.Unicode.GetString(tokenBytes));
+        }
+
+        /// <summary>
+        /// Create a storage key based.
+        /// This key will be used to save and load the stream in external storage when it is too large.
+        /// </summary>
+        /// <param name="creationDate">The creation date of the blob. Could be DateTime.MinValue if want to use current time.</param>
+        /// <returns>A storage key.</returns>
+        public string BuildStorageKey(DateTime creationDate)
+        {
+            return BlobStorageClientHelper.BuildStorageKey(creationDate);
         }
 
         /// <summary>

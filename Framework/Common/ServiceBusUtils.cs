@@ -38,7 +38,7 @@ namespace DurableTask.Common
             CompressionSettings compressionSettings,
             OrchestrationInstance instance,
             string messageType,
-            IMessageSessionStore messageSessionStore,
+            IBlobStore blobStore,
             DateTime messageFireTime)
         {
             if (serializableObject == null)
@@ -78,13 +78,13 @@ namespace DurableTask.Common
                         brokeredMessage.Properties[FrameworkConstants.CompressionTypePropertyName] =
                             FrameworkConstants.CompressionTypeGzipPropertyValue;
                     }
-                    else if (messageSessionStore != null)
+                    else if (compressedStream.Length < FrameworkConstants.MaxMessageSizeForBlobInBytes && blobStore != null)
                     {
                         // save the compressed stream using external storage when it is larger
                         // than the supported message size limit.
                         // the message is stored using the generated key, which is saved in the message property.
-                        string storageKey = messageSessionStore.BuildMessageStorageKey(instance, messageFireTime);
-                        await messageSessionStore.SaveStreamWithKeyAsync(storageKey, compressedStream);
+                        string storageKey = blobStore.BuildMessageStorageKey(instance, messageFireTime);
+                        await blobStore.SaveStreamWithKeyAsync(storageKey, compressedStream);
                         brokeredMessage = new BrokeredMessage();
                         brokeredMessage.Properties[FrameworkConstants.MessageStorageKey] = storageKey;
                         brokeredMessage.Properties[FrameworkConstants.CompressionTypePropertyName] =
@@ -93,7 +93,8 @@ namespace DurableTask.Common
                     else
                     {
                         throw new ArgumentException($"The compressed message is larger than supported. " +
-                                                    $"Please provide an implementation of IServiceBusMessageStore for external storage.", nameof(IMessageSessionStore));
+                                                    $"Please provide an implementation of IServiceBusMessageStore for external storage.",
+                            nameof(IBlobStore));
                     }
                 }
                 else
@@ -119,7 +120,7 @@ namespace DurableTask.Common
             }
         }
 
-        public static async Task<T> GetObjectFromBrokeredMessageAsync<T>(BrokeredMessage message, IMessageSessionStore messageSessionStore)
+        public static async Task<T> GetObjectFromBrokeredMessageAsync<T>(BrokeredMessage message, IBlobStore blobStore)
         {
             if (message == null)
             {
@@ -144,7 +145,7 @@ namespace DurableTask.Common
             else if (string.Equals(compressionType, FrameworkConstants.CompressionTypeGzipPropertyValue,
                 StringComparison.OrdinalIgnoreCase))
             {
-                using (var compressedStream = await GetCompressedStream(message, messageSessionStore))
+                using (var compressedStream = await GetCompressedStream(message, blobStore))
                 {
                     if (!Utils.IsGzipStream(compressedStream))
                     {
@@ -177,7 +178,7 @@ namespace DurableTask.Common
             return deserializedObject;
         }
 
-        static async Task<Stream> GetCompressedStream(BrokeredMessage message, IMessageSessionStore messageSessionStore)
+        static async Task<Stream> GetCompressedStream(BrokeredMessage message, IBlobStore blobStore)
         {
             object storageKeyObj = null;
             string storageKey = string.Empty;
@@ -193,11 +194,11 @@ namespace DurableTask.Common
 
             // if the storage key is set in the message property,
             // load the stream message from the service bus message store.
-            if (messageSessionStore == null)
+            if (blobStore == null)
             {
-                throw new ArgumentException($"Failed to load compressed message from external storage with key: {storageKey}. Please provide an implementation of IServiceBusMessageStore for external storage.", nameof(IMessageSessionStore));
+                throw new ArgumentException($"Failed to load compressed message from external storage with key: {storageKey}. Please provide an implementation of IServiceBusMessageStore for external storage.", nameof(IBlobStore));
             }
-            return await messageSessionStore.LoadStreamWithKeyAsync(storageKey);
+            return await blobStore.LoadStreamWithKeyAsync(storageKey);
 
         }
 

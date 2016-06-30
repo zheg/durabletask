@@ -73,6 +73,7 @@ namespace DurableTask.Tracking
             var cloudBlob = await this.GetCloudBlockBlobReferenceAsync(containerNameSuffix, blobName);
             Stream targetStream = new MemoryStream();
             await cloudBlob.DownloadToStreamAsync(targetStream);
+            targetStream.Position = 0;
             return targetStream;
         }
 

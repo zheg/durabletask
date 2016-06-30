@@ -26,6 +26,14 @@ namespace DurableTask.Tracking
         // the delimiter shown in the blob name as the file path
         public static readonly char BlobNameDelimiter = '/';
 
+        public static string BuildStorageKey(DateTime blobCreationTime)
+        {
+            string id = Guid.NewGuid().ToString("N");
+            return string.Format("blob{0}{2}{1}{3}", ContainerDelimiter, KeyDelimiter,
+              GetDateStringForContainerName(blobCreationTime),
+              id);
+        }
+
         public static string BuildMessageStorageKey(string instanceId, string executionId, DateTime messageFireTime)
         {
             string id = Guid.NewGuid().ToString("N");

@@ -103,6 +103,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Blob\DurableTaskBlob.cs" />
+    <Compile Include="Blob\DurableTaskBlobHelper.cs" />
     <Compile Include="History\HistoryStateEvent.cs" />
     <Compile Include="IOrchestrationServiceInstanceStore.cs" />
     <Compile Include="Settings\JumpStartSettings.cs" />
@@ -112,7 +114,7 @@
     <Compile Include="Tracking\AzureTableInstanceStore.cs" />
     <Compile Include="Tracking\BlobStorageClient.cs" />
     <Compile Include="Tracking\BlobStorageClientHelper.cs" />
-    <Compile Include="Tracking\IMessageSessionStore.cs" />
+    <Compile Include="Tracking\IBlobStore.cs" />
     <Compile Include="Tracking\JumpStartManager.cs" />
     <Compile Include="Tracking\InstanceEntityBase.cs" />
     <Compile Include="Tracking\OrchestrationJumpStartInstanceEntity.cs" />

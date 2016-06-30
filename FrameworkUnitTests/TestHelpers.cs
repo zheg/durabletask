@@ -96,6 +96,11 @@ namespace FrameworkUnitTests
             return service;
         }
 
+        public static AzureTableInstanceStore CreateAzureTableInstanceStore()
+        {
+            return new AzureTableInstanceStore(TaskHubName, StorageConnectionString);
+        }
+
         public static TaskHubClient CreateTaskHubClientNoCompression()
         {
             return new TaskHubClient(CreateOrchestrationServiceClient(null));
