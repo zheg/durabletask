@@ -11,6 +11,8 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
+using Microsoft.ServiceBus.Messaging;
+
 namespace DurableTask.Tracking
 {
     using System;
@@ -43,6 +45,13 @@ namespace DurableTask.Tracking
               BlobNameDelimiter,
               executionId,
               id);
+        }
+
+        public static string BuildSessionStorageKey(string sessionId)
+        {
+            string id = Guid.NewGuid().ToString("N");
+            return string.Format("session{0}{2}{1}{3}{4}{5}", ContainerDelimiter, KeyDelimiter,
+              GetDateStringForContainerName(DateTime.MinValue), sessionId, BlobNameDelimiter, id);
         }
 
         // use the message fire time if it is set;

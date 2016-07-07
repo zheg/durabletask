@@ -45,7 +45,8 @@ namespace DurableTask
         // as every fetched message also creates a tracking message which counts towards this limit.
         const int MaxMessageCount = 80;
         const int SessionStreamWarningSizeInBytes = 200 * 1024;
-        const int SessionStreamTerminationThresholdInBytes = 230 * 1024;
+        const int SessionStreamExternalStorageThresholdInBytes = 230 * 1024;
+        const int SessionStreamTerminationThresholdInBytes = 20 * 1024 * 1024;
         const int StatusPollingIntervalInSeconds = 2;
         const int DuplicateDetectionWindowInHours = 4;
 
@@ -410,7 +411,7 @@ namespace DurableTask
             IList<TaskMessage> newTaskMessages = await Task.WhenAll(
                 newMessages.Select(async message => await ServiceBusUtils.GetObjectFromBrokeredMessageAsync<TaskMessage>(message, blobStore)));
 
-            OrchestrationRuntimeState runtimeState = await GetSessionState(session);
+            OrchestrationRuntimeState runtimeState = await GetSessionState(session, this.InstanceStore as IBlobStore);
 
             long maxSequenceNumber = newMessages
                 .OrderByDescending(message => message.SequenceNumber)
@@ -1291,27 +1292,10 @@ namespace DurableTask
             return input;
         }
 
-        static async Task<OrchestrationRuntimeState> GetSessionState(MessageSession session)
+        static async Task<OrchestrationRuntimeState> GetSessionState(MessageSession session, IBlobStore blobStore)
         {
-            long rawSessionStateSize;
-            long newSessionStateSize;
-            OrchestrationRuntimeState runtimeState;
-            bool isEmptySession;
-
             using (Stream rawSessionStream = await session.GetStateAsync())
-            using (Stream sessionStream = await Utils.GetDecompressedStreamAsync(rawSessionStream))
-            {
-                isEmptySession = sessionStream == null;
-                rawSessionStateSize = isEmptySession ? 0 : rawSessionStream.Length;
-                newSessionStateSize = isEmptySession ? 0 : sessionStream.Length;
-
-                runtimeState = GetOrCreateInstanceState(sessionStream, session.SessionId);
-            }
-
-            TraceHelper.TraceSession(TraceEventType.Information, session.SessionId,
-                $"Size of session state is {newSessionStateSize}, compressed {rawSessionStateSize}");
-
-            return runtimeState;
+                return await RuntimeStateStreamConverter.RawStreamToRuntimeState(rawSessionStream, session.SessionId, blobStore, DataConverter);
         }
 
         async Task<bool> TrySetSessionState(
@@ -1328,42 +1312,38 @@ namespace DurableTask
                 return true;
             }
 
-            string serializedState = DataConverter.Serialize(newOrchestrationRuntimeState);
-
-            long originalStreamSize = 0;
-            using (
-                Stream compressedState = Utils.WriteStringToStream(
-                    serializedState,
-                    Settings.TaskOrchestrationDispatcherSettings.CompressOrchestrationState,
-                    out originalStreamSize))
+            try
             {
-                runtimeState.Size = originalStreamSize;
-                runtimeState.CompressedSize = compressedState.Length;
-                if (runtimeState.CompressedSize > SessionStreamTerminationThresholdInBytes)
-                {
-                    // basic idea is to simply enqueue a terminate message just like how we do it from taskhubclient
-                    // it is possible to have other messages in front of the queue and those will get processed before
-                    // the terminate message gets processed. but that is ok since in the worst case scenario we will 
-                    // simply land in this if-block again and end up queuing up another terminate message.
-                    //
-                    // the interesting scenario is when the second time we *dont* land in this if-block because e.g.
-                    // the new messages that we processed caused a new generation to be created. in that case
-                    // it is still ok because the worst case scenario is that we will terminate a newly created generation
-                    // which shouldn't have been created at all in the first place
+                Stream rawStream = await
+                    RuntimeStateStreamConverter.OrchestrationRuntimeStateToRawStream(newOrchestrationRuntimeState,
+                        runtimeState, DataConverter,
+                        Settings.TaskOrchestrationDispatcherSettings.CompressOrchestrationState,
+                        SessionStreamTerminationThresholdInBytes,
+                        SessionStreamExternalStorageThresholdInBytes, this.InstanceStore as IBlobStore, session.SessionId);
 
-                    isSessionSizeThresholdExceeded = true;
+                session.SetState(rawStream);
 
-                    string reason = $"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {SessionStreamTerminationThresholdInBytes} bytes";
-                    TraceHelper.TraceSession(TraceEventType.Critical, workItem.InstanceId, reason);
+            }
+            catch (ArgumentException exception)
+            {
+                // basic idea is to simply enqueue a terminate message just like how we do it from taskhubclient
+                // it is possible to have other messages in front of the queue and those will get processed before
+                // the terminate message gets processed. but that is ok since in the worst case scenario we will
+                // simply land in this if-block again and end up queuing up another terminate message.
+                //
+                // the interesting scenario is when the second time we *dont* land in this if-block because e.g.
+                // the new messages that we processed caused a new generation to be created. in that case
+                // it is still ok because the worst case scenario is that we will terminate a newly created generation
+                // which shouldn't have been created at all in the first place
 
-                    BrokeredMessage forcedTerminateMessage = await CreateForcedTerminateMessageAsync(runtimeState.OrchestrationInstance.InstanceId, reason);
+                isSessionSizeThresholdExceeded = true;
 
-                    await orchestratorQueueClient.SendAsync(forcedTerminateMessage);
-                }
-                else
-                {
-                    session.SetState(compressedState);
-                }
+                string reason = $"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {SessionStreamTerminationThresholdInBytes} bytes";
+                TraceHelper.TraceSession(TraceEventType.Critical, workItem.InstanceId, reason);
+
+                BrokeredMessage forcedTerminateMessage = await CreateForcedTerminateMessageAsync(runtimeState.OrchestrationInstance.InstanceId, reason);
+
+                await orchestratorQueueClient.SendAsync(forcedTerminateMessage);
             }
 
             return !isSessionSizeThresholdExceeded;
@@ -1452,37 +1432,6 @@ namespace DurableTask
                 DateTime.MinValue);
 
             return message;
-        }
-
-        static OrchestrationRuntimeState GetOrCreateInstanceState(Stream stateStream, string sessionId)
-        {
-            OrchestrationRuntimeState runtimeState;
-            if (stateStream == null)
-            {
-                TraceHelper.TraceSession(TraceEventType.Information, sessionId,
-                    "No session state exists, creating new session state.");
-                runtimeState = new OrchestrationRuntimeState();
-            }
-            else
-            {
-                if (stateStream.Position != 0)
-                {
-                    throw TraceHelper.TraceExceptionSession(TraceEventType.Error, sessionId,
-                        new ArgumentException("Stream is partially consumed"));
-                }
-
-                string serializedState = null;
-                using (var reader = new StreamReader(stateStream))
-                {
-                    serializedState = reader.ReadToEnd();
-                }
-
-                OrchestrationRuntimeState restoredState = DataConverter.Deserialize<OrchestrationRuntimeState>(serializedState);
-                // Create a new Object with just the events, we don't want the rest
-                runtimeState = new OrchestrationRuntimeState(restoredState.Events);
-            }
-
-            return runtimeState;
         }
 
         void ThrowIfInstanceStoreNotConfigured()

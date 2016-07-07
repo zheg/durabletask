@@ -11,6 +11,8 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
+using Microsoft.ServiceBus.Messaging;
+
 namespace DurableTask.Tracking
 {
     using System;
@@ -37,6 +39,14 @@ namespace DurableTask.Tracking
         /// <param name="messageFireTime">The message fire time. Could be DateTime.MinValue.</param>
         /// <returns>A message storage key.</returns>
         string BuildMessageStorageKey(OrchestrationInstance orchestrationInstance, DateTime messageFireTime);
+
+        /// <summary>
+        /// Create a storage key based on message session.
+        /// This key will be used to save and load the stream in external storage when it is too large.
+        /// </summary>
+        /// <param name="sessionId">The message session Id.</param>
+        /// <returns>A storage key.</returns>
+        string BuildSessionStorageKey(string sessionId);
 
         /// <summary>
         /// Save the stream of the message or seesion using key.

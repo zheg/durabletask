@@ -47,6 +47,19 @@ namespace FrameworkUnitTests
         }
 
         [TestMethod]
+        public void BuildStorageKeyTest()
+        {
+            DateTime messageFireTime = new DateTime(2015, 05, 17);
+            string key = BlobStorageClientHelper.BuildStorageKey(messageFireTime);
+            Regex regex = new Regex(@"blob-20150517|\w{32}$");
+            Assert.IsTrue(regex.Match(key).Success);
+
+            key = BlobStorageClientHelper.BuildStorageKey(DateTime.MinValue);
+            regex = new Regex(@"blob-\d{8}|\w{32}$");
+            Assert.IsTrue(regex.Match(key).Success);
+        }
+
+        [TestMethod]
         public void BuildMessageStorageKeyTest()
         {
             string instanceId = "aa";
@@ -58,6 +71,15 @@ namespace FrameworkUnitTests
 
             key = BlobStorageClientHelper.BuildMessageStorageKey(instanceId, executionId, DateTime.MinValue);
             regex = new Regex(@"message-\d{8}|aa/bb/\w{32}$");
+            Assert.IsTrue(regex.Match(key).Success);
+        }
+
+        [TestMethod]
+        public void BuildSessionStorageKeyTest()
+        {
+            string sessionId = "abc";
+            string key = BlobStorageClientHelper.BuildSessionStorageKey(sessionId);
+            Regex regex = new Regex(@"session-\d{8}|abc/\w{32}$");
             Assert.IsTrue(regex.Match(key).Success);
         }
 

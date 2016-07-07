@@ -132,6 +132,7 @@
     <Compile Include="InstanceStoreQueryTests.cs" />
     <Compile Include="OrchestrationTestHostTests.cs" />
     <Compile Include="DispatcherTests.cs" />
+    <Compile Include="RumtimeStateStreamConverterTest.cs" />
     <Compile Include="SerializationTests.cs" />
     <Compile Include="ServiceBusOrchestrationServiceTests.cs" />
     <Compile Include="TaskHubClientTests.cs" />

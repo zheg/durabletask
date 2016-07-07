@@ -11,6 +11,8 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
+using Microsoft.ServiceBus.Messaging;
+
 namespace DurableTask.Tracking
 {
     using System;
@@ -471,6 +473,17 @@ namespace DurableTask.Tracking
                 orchestrationInstance.InstanceId,
                 orchestrationInstance.ExecutionId,
                 messageFireTime);
+        }
+
+        /// <summary>
+        /// Create a storage key based on message session.
+        /// This key will be used to save and load the stream in external storage when it is too large.
+        /// </summary>
+        /// <param name="sessionId">The message session Id.</param>
+        /// <returns>A storage key.</returns>
+        public string BuildSessionStorageKey(string sessionId)
+        {
+            return BlobStorageClientHelper.BuildSessionStorageKey(sessionId);
         }
 
         /// <summary>
