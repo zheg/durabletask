@@ -30,6 +30,10 @@ namespace DurableTask
             OrchestrationRuntimeState runtimeState, DataConverter dataConverter, bool shouldCompress, long sessionStreamTerminationThresholdInBytes,
             long sessionStreamExternalStorageThresholdInBytes, IBlobStore blobStore, string sessionId)
         {
+            if (sessionStreamExternalStorageThresholdInBytes > 0)
+            {
+                throw new ArgumentException($"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {sessionStreamTerminationThresholdInBytes} bytes");
+            }
             string serializedState = dataConverter.Serialize(newOrchestrationRuntimeState);
 
             long originalStreamSize = 0;

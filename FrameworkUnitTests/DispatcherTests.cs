@@ -635,7 +635,7 @@ namespace FrameworkUnitTests
                 .AddTaskActivities(typeof (LargeSessionTaskActivity))
                 .StartAsync();
 
-            await SessionExceededLimitSubTestsWithInputSize(100 * 1024);
+            await SessionExceededLimitSubTestsWithInputSize(185 * 1024);
             await SessionExceededLimitSubTestsWithInputSize(200 * 1024);
             await SessionExceededLimitSubTestsWithInputSize(300 * 1024);
             await SessionExceededLimitSubTestsWithInputSize(500 * 1024);
@@ -705,7 +705,8 @@ namespace FrameworkUnitTests
         [TestMethod]
         public async Task SessionExceededTerminationLimitTest()
         {
-            string input = TestUtils.GenerateRandomString(12 * 1024 * 1024);
+            //string input = TestUtils.GenerateRandomString(12 * 1024 * 1024);
+            string input = "xy";
             await taskHub.AddTaskOrchestrations(typeof(LargeSessionOrchestration))
                 .AddTaskActivities(typeof(LargeSessionTaskActivity))
                 .StartAsync();
