@@ -470,8 +470,8 @@ namespace DurableTask.Tracking
         public string BuildMessageStorageKey(OrchestrationInstance orchestrationInstance, DateTime messageFireTime)
         {
             return BlobStorageClientHelper.BuildMessageStorageKey(
-                orchestrationInstance.InstanceId,
-                orchestrationInstance.ExecutionId,
+                orchestrationInstance != null ? orchestrationInstance.InstanceId : "null",
+                orchestrationInstance != null ? orchestrationInstance.ExecutionId : "null",
                 messageFireTime);
         }
 

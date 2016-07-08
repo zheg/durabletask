@@ -635,16 +635,24 @@ namespace FrameworkUnitTests
                 .AddTaskActivities(typeof (LargeSessionTaskActivity))
                 .StartAsync();
 
-            OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof (LargeSessionOrchestration), 50);
+            await SessionExceededLimitSubTestsWithInputSize(100 * 1024);
+            await SessionExceededLimitSubTestsWithInputSize(200 * 1024);
+            await SessionExceededLimitSubTestsWithInputSize(300 * 1024);
+            await SessionExceededLimitSubTestsWithInputSize(500 * 1024);
+            await SessionExceededLimitSubTestsWithInputSize(1000 * 1024);
+        }
 
-            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 60, true);
+        private async Task SessionExceededLimitSubTestsWithInputSize(int inputSize)
+        {
+            string input = TestUtils.GenerateRandomString(inputSize);
+            OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof(LargeSessionOrchestration), input);
 
+            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 90, true);
             await Task.Delay(20000);
 
             OrchestrationState state = await client.GetOrchestrationStateAsync(id);
-
-            Assert.AreEqual(OrchestrationStatus.Terminated, state.OrchestrationStatus);
-            Assert.IsTrue(state.Output.Contains("exceeded"));
+            Assert.AreEqual(OrchestrationStatus.Completed, state.OrchestrationStatus);
+            Assert.AreEqual($"a:{input}b:{input}", LargeSessionOrchestration.Result);
         }
 
         [TestMethod]
@@ -654,7 +662,9 @@ namespace FrameworkUnitTests
                 .AddTaskActivities(typeof (LargeSessionTaskActivity))
                 .StartAsync();
 
-            OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof (LargeSessionOrchestration), 15);
+            string input = "abc";
+
+            OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof (LargeSessionOrchestration), input);
 
             bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 90, true);
 
@@ -663,52 +673,75 @@ namespace FrameworkUnitTests
             OrchestrationState state = await client.GetOrchestrationStateAsync(id);
 
             Assert.AreEqual(OrchestrationStatus.Completed, state.OrchestrationStatus);
+            Assert.AreEqual($"a:{input}b:{input}", LargeSessionOrchestration.Result);
         }
 
         [TestMethod]
         public async Task SessionExceededLimitNoCompressionTest()
         {
-            await taskHubNoCompression.AddTaskOrchestrations(typeof (LargeSessionOrchestration))
+            string input = TestUtils.GenerateRandomString(150 * 1024);
+
+            ServiceBusOrchestrationService serviceBusOrchestrationService =
+                taskHub.orchestrationService as ServiceBusOrchestrationService;
+            serviceBusOrchestrationService.Settings.TaskOrchestrationDispatcherSettings.CompressOrchestrationState =
+                false;
+
+            await taskHub.AddTaskOrchestrations(typeof (LargeSessionOrchestration))
                 .AddTaskActivities(typeof (LargeSessionTaskActivity))
                 .StartAsync();
 
-            OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof (LargeSessionOrchestration), 15);
+            OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof (LargeSessionOrchestration), input);
 
-            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 60, true);
+            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 90, true);
 
-            await Task.Delay(20000);
+            await Task.Delay(30000);
 
             OrchestrationState state = await client.GetOrchestrationStateAsync(id);
 
+            Assert.AreEqual(OrchestrationStatus.Completed, state.OrchestrationStatus);
+            Assert.AreEqual($"a:{input}b:{input}", LargeSessionOrchestration.Result);
+        }
+
+        [TestMethod]
+        public async Task SessionExceededTerminationLimitTest()
+        {
+            string input = TestUtils.GenerateRandomString(12 * 1024 * 1024);
+            await taskHub.AddTaskOrchestrations(typeof(LargeSessionOrchestration))
+                .AddTaskActivities(typeof(LargeSessionTaskActivity))
+                .StartAsync();
+
+            OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof(LargeSessionOrchestration), input);
+            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 90, true);
+            await Task.Delay(30000);
+
+            OrchestrationState state = await client.GetOrchestrationStateAsync(id);
             Assert.AreEqual(OrchestrationStatus.Terminated, state.OrchestrationStatus);
             Assert.IsTrue(state.Output.Contains("exceeded"));
         }
 
-        public class LargeSessionOrchestration : TaskOrchestration<string, int>
+        public class LargeSessionOrchestration : TaskOrchestration<string, string>
         {
-            public override async Task<string> RunTask(OrchestrationContext context, int input)
-            {
-                for (int i = 0; i < input; i++)
-                {
-                    await context.ScheduleTask<byte[]>(typeof (LargeSessionTaskActivity));
-                }
+            // HACK: This is just a hack to communicate result of orchestration back to test
+            public static string Result;
 
-                return string.Empty;
+            public override async Task<string> RunTask(OrchestrationContext context, string input)
+            {
+                string output = string.Empty;
+
+                string outputA = await context.ScheduleTask<string>(typeof(LargeSessionTaskActivity), $"a:{input}");
+                string outputB = await context.ScheduleTask<string>(typeof(LargeSessionTaskActivity), $"b:{input}");
+
+                output = $"{outputA}{outputB}";
+                Result = output;
+                return output;
             }
         }
 
-        public sealed class LargeSessionTaskActivity : TaskActivity<string, byte[]>
+        public sealed class LargeSessionTaskActivity : TaskActivity<string, string>
         {
-            protected override byte[] Execute(TaskContext context, string input)
+            protected override string Execute(TaskContext context, string input)
             {
-                var arr = new byte[16000];
-
-                for (int i = 0; i < 1000; i++)
-                {
-                    Guid.NewGuid().ToByteArray().CopyTo(arr, i*16);
-                }
-
-                return arr;
+                return input;
             }
         }
 
