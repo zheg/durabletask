@@ -45,8 +45,6 @@ namespace DurableTask
         // as every fetched message also creates a tracking message which counts towards this limit.
         const int MaxMessageCount = 80;
         const int SessionStreamWarningSizeInBytes = 200 * 1024;
-        const int SessionStreamExternalStorageThresholdInBytes = 230 * 1024;
-        const int SessionStreamTerminationThresholdInBytes = 20 * 1024 * 1024;
         const int StatusPollingIntervalInSeconds = 2;
         const int DuplicateDetectionWindowInHours = 4;
 
@@ -570,7 +568,7 @@ namespace DurableTask
                         TraceHelper.TraceSession(
                             TraceEventType.Error, 
                             workItem.InstanceId, 
-                            $"Size of session state ({runtimeState.CompressedSize}B) is nearing session size limit of {SessionStreamTerminationThresholdInBytes}B");
+                            $"Size of session state ({runtimeState.CompressedSize}B) is nearing session size limit of {Settings.ServiceBusSettings.SessionStreamTerminationThresholdInBytes}B");
                     }
 
                     IBlobStore blobStore = this.InstanceStore as IBlobStore;
@@ -1318,8 +1316,8 @@ namespace DurableTask
                     RuntimeStateStreamConverter.OrchestrationRuntimeStateToRawStream(newOrchestrationRuntimeState,
                         runtimeState, DataConverter,
                         Settings.TaskOrchestrationDispatcherSettings.CompressOrchestrationState,
-                        SessionStreamTerminationThresholdInBytes,
-                        SessionStreamExternalStorageThresholdInBytes, this.InstanceStore as IBlobStore, session.SessionId);
+                        Settings.ServiceBusSettings.SessionStreamTerminationThresholdInBytes,
+                        Settings.ServiceBusSettings.SessionStreamExternalStorageThresholdInBytes, this.InstanceStore as IBlobStore, session.SessionId);
 
                 session.SetState(rawStream);
 
@@ -1338,7 +1336,7 @@ namespace DurableTask
 
                 isSessionSizeThresholdExceeded = true;
 
-                string reason = $"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {SessionStreamTerminationThresholdInBytes} bytes";
+                string reason = $"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {Settings.ServiceBusSettings.SessionStreamTerminationThresholdInBytes} bytes";
                 TraceHelper.TraceSession(TraceEventType.Critical, workItem.InstanceId, reason);
 
                 BrokeredMessage forcedTerminateMessage = await CreateForcedTerminateMessageAsync(runtimeState.OrchestrationInstance.InstanceId, reason);
