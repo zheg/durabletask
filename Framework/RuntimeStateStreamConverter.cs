@@ -25,7 +25,7 @@ namespace DurableTask
     using DurableTask.Tracking;
 
     /// <summary>
-    /// A converter that does conversion between the OrchestrationRuntimeState instance and a stream.
+    /// A converter that does conversion between the OrchestrationRuntimeState instance and a stream after serialization.
     /// The stream is a serialized OrchestrationSessionState that will set as session state.
     /// De-serialization is done with fallbacks in the order: OrchestrationSessionState -> OrchestrationRuntimeState -> IList<HistoryEvent>.
     /// </summary>

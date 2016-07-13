@@ -12,13 +12,12 @@
 //  ----------------------------------------------------------------------------------
 
 
-using System.Text;
-
 namespace FrameworkUnitTests
 {
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using DurableTask;
@@ -649,7 +648,7 @@ namespace FrameworkUnitTests
             string input = TestUtils.GenerateRandomString(inputSize);
             OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof(LargeSessionOrchestration), new Tuple<string, int>(input, 2));
 
-            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 90, true);
+            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 60, true);
             await Task.Delay(20000);
 
             OrchestrationState state = await client.GetOrchestrationStateAsync(id);
@@ -668,7 +667,7 @@ namespace FrameworkUnitTests
 
             OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof (LargeSessionOrchestration), new Tuple<string, int>(input, 2));
 
-            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 90, true);
+            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 60, true);
 
             await Task.Delay(20000);
 
@@ -694,9 +693,9 @@ namespace FrameworkUnitTests
 
             OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof (LargeSessionOrchestration), new Tuple<string, int>(input, 2));
 
-            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 90, true);
+            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 60, true);
 
-            await Task.Delay(30000);
+            await Task.Delay(20000);
 
             OrchestrationState state = await client.GetOrchestrationStateAsync(id);
 
@@ -719,8 +718,8 @@ namespace FrameworkUnitTests
                 = 1024 * 1024;
 
             OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof(LargeSessionOrchestration), new Tuple<string, int>(input, 10));
-            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 90, true);
-            await Task.Delay(30000);
+            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 60, true);
+            await Task.Delay(20000);
 
             OrchestrationState state = await client.GetOrchestrationStateAsync(id);
             Assert.AreEqual(OrchestrationStatus.Terminated, state.OrchestrationStatus);

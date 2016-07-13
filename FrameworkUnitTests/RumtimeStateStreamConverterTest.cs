@@ -11,8 +11,6 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
-using DurableTask.Common;
-
 namespace FrameworkUnitTests
 {
     using System;
@@ -21,6 +19,7 @@ namespace FrameworkUnitTests
     using System.Threading.Tasks;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using DurableTask;
+    using DurableTask.Common;
     using DurableTask.History;
     using DurableTask.Serializing;
     using DurableTask.Tracking;

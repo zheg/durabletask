@@ -18,7 +18,7 @@ namespace DurableTask
 
     /// <summary>
     /// The object that represents the serialized session state.
-    /// It hold a list of history events (empty storage key), or a key for external storage if it is too large to fit in the the session state.
+    /// It holds a list of history events (when storage key is empty), or a key for external storage if it is too large to fit in the the session state.
     /// </summary>
     internal class OrchestrationSessionState
     {

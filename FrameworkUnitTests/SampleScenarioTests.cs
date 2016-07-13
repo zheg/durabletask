@@ -24,7 +24,6 @@ namespace FrameworkUnitTests
     using DurableTask.Exceptions;
     using DurableTask.Test;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
-    using System.Text;
 
     [TestClass]
     public class SampleScenarioTests

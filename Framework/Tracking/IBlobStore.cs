@@ -11,8 +11,6 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
-using Microsoft.ServiceBus.Messaging;
-
 namespace DurableTask.Tracking
 {
     using System;
