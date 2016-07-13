@@ -107,6 +107,7 @@
     <Compile Include="Blob\DurableTaskBlobHelper.cs" />
     <Compile Include="History\HistoryStateEvent.cs" />
     <Compile Include="IOrchestrationServiceInstanceStore.cs" />
+    <Compile Include="OrchestrationSessionState.cs" />
     <Compile Include="RuntimeStateStreamConverter.cs" />
     <Compile Include="Settings\JumpStartSettings.cs" />
     <Compile Include="Settings\ServiceBusOrchestrationServiceSettings.cs" />

@@ -11,6 +11,8 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
+using DurableTask.Common;
+
 namespace FrameworkUnitTests
 {
     using System;
@@ -98,7 +100,7 @@ namespace FrameworkUnitTests
             OrchestrationRuntimeState convertedRuntimeStateLarge2 = await RuntimeStateStreamConverter.RawStreamToRuntimeState(rawStreamLarge2, "sessionId", azureTableInstanceStore as IBlobStore, dataConverter);
             verifyEventInput(largeInput2, convertedRuntimeStateLarge2);
 
-            // test for an un-implemented (or null) IBlobStorage for large runtime states
+            // test for an un-implemented (or null) IBlobStorage for large runtime states: should throw exception
             try
             {
                 await
@@ -122,7 +124,7 @@ namespace FrameworkUnitTests
             OrchestrationRuntimeState runtimeState = new OrchestrationRuntimeState();
             DataConverter dataConverter = new JsonDataConverter();
 
-            // test for very large size rumtime state: should throw exception
+            // test for very large size rumtime state that cannot be saved externally: should throw exception
             try
             {
                 Stream rawStreamVeryLarge = await RuntimeStateStreamConverter.OrchestrationRuntimeStateToRawStream(newOrchestrationRuntimeStateLarge,
@@ -134,6 +136,53 @@ namespace FrameworkUnitTests
             {
                 // expected
             }
+        }
+
+        [TestMethod]
+        public async Task ConverterCompatabilityTest()
+        {
+            string smallInput = "abc";
+            OrchestrationRuntimeState newOrchestrationRuntimeStateSmall = generateOrchestrationRuntimeState(smallInput);
+            OrchestrationRuntimeState runtimeState = new OrchestrationRuntimeState();
+            DataConverter dataConverter = new JsonDataConverter();
+
+            // deserialize a OrchestrationRuntimeState object, with both compression and not compression
+            Stream stream = serializeToStream(dataConverter, newOrchestrationRuntimeStateSmall, true);
+            OrchestrationRuntimeState convertedRuntimeStateSmall = await RuntimeStateStreamConverter.RawStreamToRuntimeState(stream, "sessionId", null, dataConverter);
+            verifyEventInput(smallInput, convertedRuntimeStateSmall);
+
+            stream = serializeToStream(dataConverter, newOrchestrationRuntimeStateSmall, false);
+            convertedRuntimeStateSmall = await RuntimeStateStreamConverter.RawStreamToRuntimeState(stream, "sessionId", null, dataConverter);
+            verifyEventInput(smallInput, convertedRuntimeStateSmall);
+
+            // deserialize a IList<HistoryEvent> object, with both compression and not compression
+            Stream stream2 = serializeToStream(dataConverter, newOrchestrationRuntimeStateSmall.Events, true);
+            OrchestrationRuntimeState convertedRuntimeStateSmall2 = await RuntimeStateStreamConverter.RawStreamToRuntimeState(stream2, "sessionId", null, dataConverter);
+            verifyEventInput(smallInput, convertedRuntimeStateSmall2);
+
+            stream2 = serializeToStream(dataConverter, newOrchestrationRuntimeStateSmall.Events, false);
+            convertedRuntimeStateSmall2 = await RuntimeStateStreamConverter.RawStreamToRuntimeState(stream2, "sessionId", null, dataConverter);
+            verifyEventInput(smallInput, convertedRuntimeStateSmall2);
+        }
+
+        private Stream serializeToStream(DataConverter dataConverter, OrchestrationRuntimeState orchestrationRuntimeState, bool shouldCompress)
+        {
+            string serializedState = dataConverter.Serialize(orchestrationRuntimeState);
+            long originalStreamSize = 0;
+            return Utils.WriteStringToStream(
+                serializedState,
+                shouldCompress,
+                out originalStreamSize);
+        }
+
+        private Stream serializeToStream(DataConverter dataConverter, IList<HistoryEvent> events, bool shouldCompress)
+        {
+            string serializedState = dataConverter.Serialize(events);
+            long originalStreamSize = 0;
+            return Utils.WriteStringToStream(
+                serializedState,
+                shouldCompress,
+                out originalStreamSize);
         }
 
         OrchestrationRuntimeState generateOrchestrationRuntimeState(string input)

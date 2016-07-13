@@ -111,14 +111,6 @@ namespace DurableTask
         }
 
         /// <summary>
-        /// The external storage key
-        /// </summary>
-        public string StorageKey
-        {
-            get; set;
-        }
-
-        /// <summary>
         /// Gets the serialized input of the ExecutionStartedEvent
         /// </summary>
         public string Input
