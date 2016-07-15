@@ -21,6 +21,7 @@ namespace DurableTask
     using DurableTask.Common;
     using DurableTask.History;
     using DurableTask.Serializing;
+    using DurableTask.Settings;
     using DurableTask.Tracing;
     using DurableTask.Tracking;
 
@@ -32,8 +33,8 @@ namespace DurableTask
     class RuntimeStateStreamConverter
     {
         public static async Task<Stream> OrchestrationRuntimeStateToRawStream(OrchestrationRuntimeState newOrchestrationRuntimeState,
-            OrchestrationRuntimeState runtimeState, DataConverter dataConverter, bool shouldCompress, long sessionStreamTerminationThresholdInBytes,
-            long sessionStreamExternalStorageThresholdInBytes, IBlobStore blobStore, string sessionId)
+            OrchestrationRuntimeState runtimeState, DataConverter dataConverter, bool shouldCompress,
+            ServiceBusSessionSettings serviceBusSessionSettings, IBlobStore blobStore, string sessionId)
         {
             OrchestrationSessionState orchestrationSessionState = new OrchestrationSessionState(newOrchestrationRuntimeState.Events);
             string serializedState = dataConverter.Serialize(orchestrationSessionState);
@@ -47,12 +48,12 @@ namespace DurableTask
             runtimeState.Size = originalStreamSize;
             runtimeState.CompressedSize = compressedState.Length;
 
-            if (runtimeState.CompressedSize > sessionStreamTerminationThresholdInBytes)
+            if (runtimeState.CompressedSize > serviceBusSessionSettings.SessionStreamTerminationThresholdInBytes)
             {
-                throw new ArgumentException($"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {sessionStreamTerminationThresholdInBytes} bytes");
+                throw new ArgumentException($"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {serviceBusSessionSettings.SessionStreamTerminationThresholdInBytes} bytes");
             }
 
-            if (runtimeState.CompressedSize > sessionStreamExternalStorageThresholdInBytes)
+            if (runtimeState.CompressedSize > serviceBusSessionSettings.SessionStreamExternalStorageThresholdInBytes)
             {
                 return await CreateStreamForExternalStorageAsync(shouldCompress,
                         blobStore, sessionId, dataConverter, compressedState);

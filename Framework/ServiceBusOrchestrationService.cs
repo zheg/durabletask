@@ -568,7 +568,7 @@ namespace DurableTask
                         TraceHelper.TraceSession(
                             TraceEventType.Error, 
                             workItem.InstanceId, 
-                            $"Size of session state ({runtimeState.CompressedSize}B) is nearing session size limit of {Settings.ServiceBusSettings.SessionStreamTerminationThresholdInBytes}B");
+                            $"Size of session state ({runtimeState.CompressedSize}B) is nearing session size limit of {Settings.ServiceBusSessionSettings.SessionStreamTerminationThresholdInBytes}B");
                     }
 
                     IBlobStore blobStore = this.InstanceStore as IBlobStore;
@@ -1316,8 +1316,7 @@ namespace DurableTask
                     RuntimeStateStreamConverter.OrchestrationRuntimeStateToRawStream(newOrchestrationRuntimeState,
                         runtimeState, DataConverter,
                         Settings.TaskOrchestrationDispatcherSettings.CompressOrchestrationState,
-                        Settings.ServiceBusSettings.SessionStreamTerminationThresholdInBytes,
-                        Settings.ServiceBusSettings.SessionStreamExternalStorageThresholdInBytes,
+                        Settings.ServiceBusSessionSettings,
                         this.InstanceStore as IBlobStore, session.SessionId);
 
                 session.SetState(rawStream);
@@ -1337,7 +1336,7 @@ namespace DurableTask
 
                 isSessionSizeThresholdExceeded = true;
 
-                string reason = $"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {Settings.ServiceBusSettings.SessionStreamTerminationThresholdInBytes} bytes";
+                string reason = $"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {Settings.ServiceBusSessionSettings.SessionStreamTerminationThresholdInBytes} bytes";
                 TraceHelper.TraceSession(TraceEventType.Critical, workItem.InstanceId, reason);
 
                 BrokeredMessage forcedTerminateMessage = await CreateForcedTerminateMessageAsync(runtimeState.OrchestrationInstance.InstanceId, reason);

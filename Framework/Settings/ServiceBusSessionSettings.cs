@@ -16,12 +16,17 @@ namespace DurableTask.Settings
     /// <summary>
     ///     Settings to configure the Service Bus.
     /// </summary>
-    public class ServiceBusSettings
+    public class ServiceBusSessionSettings
     {     
-        internal ServiceBusSettings()
+        internal ServiceBusSessionSettings()
         {
             SessionStreamExternalStorageThresholdInBytes = 230 * 1024;
             SessionStreamTerminationThresholdInBytes = 10 * 1024 * 1024;
+        }
+        internal ServiceBusSessionSettings(int sessionStreamExternalStorageThresholdInBytes, int sessionStreamTerminationThresholdInBytes)
+        {
+            SessionStreamExternalStorageThresholdInBytes = sessionStreamExternalStorageThresholdInBytes;
+            SessionStreamTerminationThresholdInBytes = sessionStreamTerminationThresholdInBytes;
         }
 
         /// <summary>

@@ -11,6 +11,8 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
+using DurableTask.Settings;
+
 namespace FrameworkUnitTests
 {
     using System;
@@ -27,9 +29,10 @@ namespace FrameworkUnitTests
     [TestClass]
     public class RumtimeStateStreamConverterTest
     {
-        const long SessionStreamTerminationThresholdInBytes = 10 * 1024;
-        const long SessionStreamExternalStorageThresholdInBytes = 2 * 1024;
+        const int SessionStreamExternalStorageThresholdInBytes = 2 * 1024;
+        const int SessionStreamTerminationThresholdInBytes = 10 * 1024;
         const string sessionId = "session123";
+        ServiceBusSessionSettings serviceBusSessionSettings = new ServiceBusSessionSettings(SessionStreamExternalStorageThresholdInBytes, SessionStreamTerminationThresholdInBytes);
 
         AzureTableInstanceStore azureTableInstanceStore;
         [TestInitialize]
@@ -48,29 +51,26 @@ namespace FrameworkUnitTests
         public async Task SmallRuntimeStateConverterTest()
         {       
             string smallInput = "abc";
-            
+
             OrchestrationRuntimeState newOrchestrationRuntimeStateSmall = generateOrchestrationRuntimeState(smallInput);
             OrchestrationRuntimeState runtimeState = new OrchestrationRuntimeState();
             DataConverter dataConverter = new JsonDataConverter();
 
             // a small runtime state doesn't need external storage.
             Stream rawStreamSmall = await RuntimeStateStreamConverter.OrchestrationRuntimeStateToRawStream(newOrchestrationRuntimeStateSmall,
-                runtimeState, dataConverter, true, SessionStreamTerminationThresholdInBytes,
-                SessionStreamExternalStorageThresholdInBytes, azureTableInstanceStore as IBlobStore, sessionId);
+                runtimeState, dataConverter, true, serviceBusSessionSettings, azureTableInstanceStore as IBlobStore, sessionId);
             OrchestrationRuntimeState convertedRuntimeStateSmall = await RuntimeStateStreamConverter.RawStreamToRuntimeState(rawStreamSmall, "sessionId", azureTableInstanceStore as IBlobStore, dataConverter);
             verifyEventInput(smallInput, convertedRuntimeStateSmall);
 
             // test for un-compress case
             Stream rawStreamSmall2 = await RuntimeStateStreamConverter.OrchestrationRuntimeStateToRawStream(newOrchestrationRuntimeStateSmall,
-                runtimeState, dataConverter, false, SessionStreamTerminationThresholdInBytes,
-                SessionStreamExternalStorageThresholdInBytes, azureTableInstanceStore as IBlobStore, sessionId);
+                runtimeState, dataConverter, false, serviceBusSessionSettings, azureTableInstanceStore as IBlobStore, sessionId);
             OrchestrationRuntimeState convertedRuntimeStateSmall2 = await RuntimeStateStreamConverter.RawStreamToRuntimeState(rawStreamSmall2, "sessionId", azureTableInstanceStore as IBlobStore, dataConverter);
             verifyEventInput(smallInput, convertedRuntimeStateSmall2);
 
             // test for backward comp: ok for an un-implemented (or null) IBlobStorage for small runtime states
             Stream rawStreamSmall3 = await RuntimeStateStreamConverter.OrchestrationRuntimeStateToRawStream(newOrchestrationRuntimeStateSmall,
-                runtimeState, dataConverter, true, SessionStreamTerminationThresholdInBytes,
-                SessionStreamExternalStorageThresholdInBytes, null, sessionId);
+                runtimeState, dataConverter, true, serviceBusSessionSettings, null, sessionId);
             OrchestrationRuntimeState convertedRuntimeStateSmall3 = await RuntimeStateStreamConverter.RawStreamToRuntimeState(rawStreamSmall3, "sessionId", null, dataConverter);
             verifyEventInput(smallInput, convertedRuntimeStateSmall3);
         }
@@ -85,8 +85,7 @@ namespace FrameworkUnitTests
 
             // a large runtime state that needs external storage.
             Stream rawStreamLarge = await RuntimeStateStreamConverter.OrchestrationRuntimeStateToRawStream(newOrchestrationRuntimeStateLarge,
-                runtimeState, dataConverter, true, SessionStreamTerminationThresholdInBytes,
-                SessionStreamExternalStorageThresholdInBytes, azureTableInstanceStore as IBlobStore, sessionId);
+                runtimeState, dataConverter, true, serviceBusSessionSettings, azureTableInstanceStore as IBlobStore, sessionId);
             OrchestrationRuntimeState convertedRuntimeStateLarge = await RuntimeStateStreamConverter.RawStreamToRuntimeState(rawStreamLarge, "sessionId", azureTableInstanceStore as IBlobStore, dataConverter);
             verifyEventInput(largeInput, convertedRuntimeStateLarge);
 
@@ -94,8 +93,7 @@ namespace FrameworkUnitTests
             string largeInput2 = TestUtils.GenerateRandomString(3 * 1024);
             OrchestrationRuntimeState newOrchestrationRuntimeStateLarge2 = generateOrchestrationRuntimeState(largeInput2);
             Stream rawStreamLarge2 = await RuntimeStateStreamConverter.OrchestrationRuntimeStateToRawStream(newOrchestrationRuntimeStateLarge2,
-                runtimeState, dataConverter, false, SessionStreamTerminationThresholdInBytes,
-                SessionStreamExternalStorageThresholdInBytes, azureTableInstanceStore as IBlobStore, sessionId);
+                runtimeState, dataConverter, false, serviceBusSessionSettings, azureTableInstanceStore as IBlobStore, sessionId);
             OrchestrationRuntimeState convertedRuntimeStateLarge2 = await RuntimeStateStreamConverter.RawStreamToRuntimeState(rawStreamLarge2, "sessionId", azureTableInstanceStore as IBlobStore, dataConverter);
             verifyEventInput(largeInput2, convertedRuntimeStateLarge2);
 
@@ -104,8 +102,7 @@ namespace FrameworkUnitTests
             {
                 await
                     RuntimeStateStreamConverter.OrchestrationRuntimeStateToRawStream(newOrchestrationRuntimeStateLarge,
-                        runtimeState, dataConverter, true, SessionStreamTerminationThresholdInBytes,
-                        SessionStreamExternalStorageThresholdInBytes, null, sessionId);
+                        runtimeState, dataConverter, true, serviceBusSessionSettings, null, sessionId);
                 Assert.Fail("ArgumentException must be thrown");
             }
             catch (ArgumentException e)
@@ -127,8 +124,7 @@ namespace FrameworkUnitTests
             try
             {
                 Stream rawStreamVeryLarge = await RuntimeStateStreamConverter.OrchestrationRuntimeStateToRawStream(newOrchestrationRuntimeStateLarge,
-                    runtimeState, dataConverter, true, SessionStreamTerminationThresholdInBytes,
-                    SessionStreamExternalStorageThresholdInBytes, azureTableInstanceStore as IBlobStore, sessionId);
+                    runtimeState, dataConverter, true, serviceBusSessionSettings, azureTableInstanceStore as IBlobStore, sessionId);
                 Assert.Fail("ArgumentException must be thrown");
             }
             catch (ArgumentException e)
