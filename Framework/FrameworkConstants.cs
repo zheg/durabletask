@@ -59,12 +59,6 @@ namespace DurableTask
         // service bus message storage key in message property
         public const string MessageStorageKey = "MessageStorageKey";
 
-        // the max allowed message size after compression in service bus
-        public const int MaxMessageSizeInBytes = 170 * 1024;
-
-        // the max allowed message size for external storage
-        public const int MaxMessageSizeForBlobInBytes = 10 * 1024 * 1024;
-
         // instance store constants
         public const int MaxStringLengthForAzureTableColumn = 1024 * 15; // cut off at 15k * 2 bytes 
     }

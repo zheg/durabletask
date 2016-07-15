@@ -580,6 +580,7 @@ namespace DurableTask
                             await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                                 m,
                                 Settings.MessageCompressionSettings,
+                                Settings.ServiceBusMessageSettings,
                                 null,
                                 "Worker outbound message",
                                 blobStore,
@@ -597,6 +598,7 @@ namespace DurableTask
                                 BrokeredMessage message = await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                                 m,
                                 Settings.MessageCompressionSettings,
+                                Settings.ServiceBusMessageSettings,
                                 newOrchestrationRuntimeState.OrchestrationInstance,
                                 "Timer Message",
                                 blobStore,
@@ -615,6 +617,7 @@ namespace DurableTask
                                 await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                                 m,
                                 Settings.MessageCompressionSettings,
+                                Settings.ServiceBusMessageSettings,
                                 m.OrchestrationInstance,
                                 "Sub Orchestration",
                                 blobStore,
@@ -629,6 +632,7 @@ namespace DurableTask
                             await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                                 continuedAsNewMessage,
                                 Settings.MessageCompressionSettings,
+                                Settings.ServiceBusMessageSettings,
                                 newOrchestrationRuntimeState.OrchestrationInstance,
                                 "Continue as new",
                                 blobStore,
@@ -805,6 +809,7 @@ namespace DurableTask
             BrokeredMessage brokeredResponseMessage = await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                 responseMessage,
                 Settings.MessageCompressionSettings,
+                Settings.ServiceBusMessageSettings,
                 workItem.TaskMessage.OrchestrationInstance,
                 $"Response for {workItem.TaskMessage.OrchestrationInstance.InstanceId}",
                 blobStore,
@@ -925,6 +930,7 @@ namespace DurableTask
             BrokeredMessage brokeredMessage = await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                 message,
                 Settings.MessageCompressionSettings,
+                Settings.ServiceBusMessageSettings,
                 message.OrchestrationInstance,
                 "SendTaskOrchestrationMessage",
                 blobStore,
@@ -1140,6 +1146,7 @@ namespace DurableTask
                 BrokeredMessage trackingMessage = await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                     taskMessage,
                     Settings.MessageCompressionSettings,
+                    Settings.ServiceBusMessageSettings,
                     runtimeState.OrchestrationInstance,
                     "History Tracking Message",
                     blobStore,
@@ -1157,6 +1164,7 @@ namespace DurableTask
             BrokeredMessage brokeredStateMessage = await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                 stateMessage,
                 Settings.MessageCompressionSettings,
+                Settings.ServiceBusMessageSettings,
                 runtimeState.OrchestrationInstance,
                 "State Tracking Message",
                 blobStore,
@@ -1424,6 +1432,7 @@ namespace DurableTask
             BrokeredMessage message = await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                 taskMessage,
                 Settings.MessageCompressionSettings,
+                Settings.ServiceBusMessageSettings,
                 newOrchestrationInstance,
                 "Forced Terminate",
                 blobStore,

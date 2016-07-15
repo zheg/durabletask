@@ -14,29 +14,29 @@
 namespace DurableTask.Settings
 {
     /// <summary>
-    ///     Settings to configure the Service Bus session.
+    ///     Settings to configure the Service Bus message.
     /// </summary>
-    public class ServiceBusSessionSettings
-    {     
-        internal ServiceBusSessionSettings()
+    public class ServiceBusMessageSettings
+    {
+        internal ServiceBusMessageSettings()
         {
-            SessionStreamExternalStorageThresholdInBytes = 230 * 1024;
-            SessionStreamTerminationThresholdInBytes = 10 * 1024 * 1024;
+            MaxMessageSizeInBytes = 170 * 1024;
+            MaxMessageSizeForBlobInBytes = 10 * 1024 * 1024;
         }
-        internal ServiceBusSessionSettings(int sessionStreamExternalStorageThresholdInBytes, int sessionStreamTerminationThresholdInBytes)
+        internal ServiceBusMessageSettings(int maxMessageSizeInBytes, int maxMessageSizeForBlobInBytes)
         {
-            SessionStreamExternalStorageThresholdInBytes = sessionStreamExternalStorageThresholdInBytes;
-            SessionStreamTerminationThresholdInBytes = sessionStreamTerminationThresholdInBytes;
+            MaxMessageSizeInBytes = maxMessageSizeInBytes;
+            MaxMessageSizeForBlobInBytes = maxMessageSizeForBlobInBytes;
         }
 
         /// <summary>
-        ///     The threshold for external storage of session in stream. Default is 230K.
+        ///     The max allowed message size after compression in service bus. Default is 170K.
         /// </summary>
-        public int SessionStreamExternalStorageThresholdInBytes { get; set; }
+        public int MaxMessageSizeInBytes { get; set; }
 
         /// <summary>
-        ///     The threshold of session for orchestration termination. Default is 10M.
+        ///    The max allowed message size for external storage. Default is 10M.
         /// </summary>
-        public int SessionStreamTerminationThresholdInBytes { get; set; }
+        public int MaxMessageSizeForBlobInBytes { get; set; }
     }
 }

@@ -33,6 +33,7 @@ namespace DurableTask.Settings
             TrackingDispatcherSettings = new TrackingDispatcherSettings();
             JumpStartSettings = new JumpStartSettings();
             ServiceBusSessionSettings = new ServiceBusSessionSettings();
+            ServiceBusMessageSettings = new ServiceBusMessageSettings();
 
             MessageCompressionSettings = new CompressionSettings
             {
@@ -101,6 +102,14 @@ namespace DurableTask.Settings
         /// </summary>
         public CompressionSettings MessageCompressionSettings { get; set; }
 
+        /// <summary>
+        ///     Settings to configure the service bus session
+        /// </summary>
         public ServiceBusSessionSettings ServiceBusSessionSettings { get; set; }
+
+        /// <summary>
+        ///     Settings to configure the service bus message
+        /// </summary>
+        public ServiceBusMessageSettings ServiceBusMessageSettings { get; set; }
     }
 }

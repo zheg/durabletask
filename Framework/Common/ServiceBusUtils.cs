@@ -30,12 +30,13 @@ namespace DurableTask.Common
     {
         public static async Task<BrokeredMessage> GetBrokeredMessageFromObjectAsync(object serializableObject, CompressionSettings compressionSettings)
         {
-            return await GetBrokeredMessageFromObjectAsync(serializableObject, compressionSettings, null, null, null, DateTime.MinValue);
+            return await GetBrokeredMessageFromObjectAsync(serializableObject, compressionSettings, new ServiceBusMessageSettings(), null, null, null, DateTime.MinValue);
         }
 
         public static async Task<BrokeredMessage> GetBrokeredMessageFromObjectAsync(
             object serializableObject,
             CompressionSettings compressionSettings,
+            ServiceBusMessageSettings messageSettings,
             OrchestrationInstance instance,
             string messageType,
             IBlobStore blobStore,
@@ -72,13 +73,13 @@ namespace DurableTask.Common
                             brokeredMessage.MessageId +
                             ", uncompressed " + rawLen + " -> compressed " + compressedStream.Length);
 
-                    if (compressedStream.Length < FrameworkConstants.MaxMessageSizeInBytes)
+                    if (compressedStream.Length < messageSettings.MaxMessageSizeInBytes)
                     {
                         brokeredMessage = new BrokeredMessage(compressedStream, true);
                         brokeredMessage.Properties[FrameworkConstants.CompressionTypePropertyName] =
                             FrameworkConstants.CompressionTypeGzipPropertyValue;
                     }
-                    else if (compressedStream.Length < FrameworkConstants.MaxMessageSizeForBlobInBytes && blobStore != null)
+                    else if (compressedStream.Length < messageSettings.MaxMessageSizeForBlobInBytes && blobStore != null)
                     {
                         // save the compressed stream using external storage when it is larger
                         // than the supported message size limit.

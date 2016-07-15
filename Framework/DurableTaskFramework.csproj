@@ -110,6 +110,7 @@
     <Compile Include="OrchestrationSessionState.cs" />
     <Compile Include="RuntimeStateStreamConverter.cs" />
     <Compile Include="Settings\JumpStartSettings.cs" />
+    <Compile Include="Settings\ServiceBusMessageSettings.cs" />
     <Compile Include="Settings\ServiceBusOrchestrationServiceSettings.cs" />
     <Compile Include="Settings\ServiceBusSessionSettings.cs" />
     <Compile Include="Tracking\AzureTableOrchestrationJumpStartEntity.cs" />
