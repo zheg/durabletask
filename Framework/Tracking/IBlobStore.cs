@@ -22,7 +22,7 @@ namespace DurableTask.Tracking
     interface IBlobStore
     {
         /// <summary>
-        /// Create a storage key based.
+        /// Create a storage key based on the creation date.
         /// This key will be used to save and load the stream in external storage when it is too large.
         /// </summary>
         /// <param name="creationDate">The creation date of the blob. Could be DateTime.MinValue if want to use current time.</param>

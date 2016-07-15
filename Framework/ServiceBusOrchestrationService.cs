@@ -409,7 +409,7 @@ namespace DurableTask
             IList<TaskMessage> newTaskMessages = await Task.WhenAll(
                 newMessages.Select(async message => await ServiceBusUtils.GetObjectFromBrokeredMessageAsync<TaskMessage>(message, blobStore)));
 
-            OrchestrationRuntimeState runtimeState = await GetSessionState(session, this.InstanceStore as IBlobStore);
+            OrchestrationRuntimeState runtimeState = await GetSessionState(session, blobStore);
 
             long maxSequenceNumber = newMessages
                 .OrderByDescending(message => message.SequenceNumber)
@@ -1317,7 +1317,8 @@ namespace DurableTask
                         runtimeState, DataConverter,
                         Settings.TaskOrchestrationDispatcherSettings.CompressOrchestrationState,
                         Settings.ServiceBusSettings.SessionStreamTerminationThresholdInBytes,
-                        Settings.ServiceBusSettings.SessionStreamExternalStorageThresholdInBytes, this.InstanceStore as IBlobStore, session.SessionId);
+                        Settings.ServiceBusSettings.SessionStreamExternalStorageThresholdInBytes,
+                        this.InstanceStore as IBlobStore, session.SessionId);
 
                 session.SetState(rawStream);
 
