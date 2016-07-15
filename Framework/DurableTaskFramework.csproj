@@ -103,8 +103,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Blob\DurableTaskBlob.cs" />
-    <Compile Include="Blob\DurableTaskBlobHelper.cs" />
     <Compile Include="History\HistoryStateEvent.cs" />
     <Compile Include="IOrchestrationServiceInstanceStore.cs" />
     <Compile Include="OrchestrationSessionState.cs" />
