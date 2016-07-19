@@ -22,7 +22,7 @@ namespace DurableTask.Tracking
     using Microsoft.WindowsAzure.Storage.Blob;
     using Microsoft.WindowsAzure.Storage.RetryPolicies;
 
-    internal class BlobStorageClient
+    public class BlobStorageClient
     {
         // use hubName as the container prefix. 
         // the container full name is in the format of {hubName}-{streamType}-{DateTime};

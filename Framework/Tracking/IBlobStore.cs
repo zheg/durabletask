@@ -19,7 +19,7 @@ namespace DurableTask.Tracking
     /// <summary>
     /// Interface to allow save and load large blobs, such as message and session, as a stream using a storage store.
     /// </summary>
-    interface IBlobStore
+    public interface IBlobStore
     {
         /// <summary>
         /// Create a storage key based on the creation date.

@@ -15,7 +15,7 @@ namespace DurableTask.Tracking
 {
     using System;
 
-    class BlobStorageClientHelper
+    public class BlobStorageClientHelper
     {
         static readonly string DateFormat = "yyyyMMdd";
         static readonly char ContainerDelimiter = '-';
