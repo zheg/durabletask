@@ -27,7 +27,7 @@ namespace FrameworkUnitTests
     using DurableTask.Tracking;
 
     [TestClass]
-    public class RumtimeStateStreamConverterTest
+    public class RuntimeStateStreamConverterTest
     {
         const int SessionStreamExternalStorageThresholdInBytes = 2 * 1024;
         const int SessionStreamTerminationThresholdInBytes = 10 * 1024;

@@ -576,7 +576,7 @@ namespace DurableTask
                         TraceHelper.TraceSession(
                             TraceEventType.Error, 
                             workItem.InstanceId, 
-                            $"Size of session state ({runtimeState.CompressedSize}B) is nearing session size limit of {Settings.ServiceBusSessionSettings.SessionStreamTerminationThresholdInBytes}B");
+                            $"Size of session state ({runtimeState.CompressedSize}B) is nearing session size limit of {Settings.SessionSettings.SessionStreamTerminationThresholdInBytes}B");
                     }
 
                     // We need to .ToList() the IEnumerable otherwise GetBrokeredMessageFromObjectAsync gets called 5 times per message due to Service Bus doing multiple enumeration
@@ -587,7 +587,7 @@ namespace DurableTask
                             await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                                 m,
                                 Settings.MessageCompressionSettings,
-                                Settings.ServiceBusMessageSettings,
+                                Settings.MessageSettings,
                                 null,
                                 "Worker outbound message",
                                 this.BlobStore,
@@ -605,7 +605,7 @@ namespace DurableTask
                                 BrokeredMessage message = await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                                 m,
                                 Settings.MessageCompressionSettings,
-                                Settings.ServiceBusMessageSettings,
+                                Settings.MessageSettings,
                                 newOrchestrationRuntimeState.OrchestrationInstance,
                                 "Timer Message",
                                 this.BlobStore,
@@ -624,7 +624,7 @@ namespace DurableTask
                                 await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                                 m,
                                 Settings.MessageCompressionSettings,
-                                Settings.ServiceBusMessageSettings,
+                                Settings.MessageSettings,
                                 m.OrchestrationInstance,
                                 "Sub Orchestration",
                                 this.BlobStore,
@@ -639,7 +639,7 @@ namespace DurableTask
                             await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                                 continuedAsNewMessage,
                                 Settings.MessageCompressionSettings,
-                                Settings.ServiceBusMessageSettings,
+                                Settings.MessageSettings,
                                 newOrchestrationRuntimeState.OrchestrationInstance,
                                 "Continue as new",
                                 this.BlobStore,
@@ -814,7 +814,7 @@ namespace DurableTask
             BrokeredMessage brokeredResponseMessage = await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                 responseMessage,
                 Settings.MessageCompressionSettings,
-                Settings.ServiceBusMessageSettings,
+                Settings.MessageSettings,
                 workItem.TaskMessage.OrchestrationInstance,
                 $"Response for {workItem.TaskMessage.OrchestrationInstance.InstanceId}",
                 this.BlobStore,
@@ -934,7 +934,7 @@ namespace DurableTask
             BrokeredMessage brokeredMessage = await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                 message,
                 Settings.MessageCompressionSettings,
-                Settings.ServiceBusMessageSettings,
+                Settings.MessageSettings,
                 message.OrchestrationInstance,
                 "SendTaskOrchestrationMessage",
                 this.BlobStore,
@@ -1151,7 +1151,7 @@ namespace DurableTask
                 BrokeredMessage trackingMessage = await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                     taskMessage,
                     Settings.MessageCompressionSettings,
-                    Settings.ServiceBusMessageSettings,
+                    Settings.MessageSettings,
                     runtimeState.OrchestrationInstance,
                     "History Tracking Message",
                     this.BlobStore,
@@ -1169,7 +1169,7 @@ namespace DurableTask
             BrokeredMessage brokeredStateMessage = await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                 stateMessage,
                 Settings.MessageCompressionSettings,
-                Settings.ServiceBusMessageSettings,
+                Settings.MessageSettings,
                 runtimeState.OrchestrationInstance,
                 "State Tracking Message",
                 BlobStore,
@@ -1331,7 +1331,7 @@ namespace DurableTask
                         runtimeState,
                         DataConverter,
                         Settings.TaskOrchestrationDispatcherSettings.CompressOrchestrationState,
-                        Settings.ServiceBusSessionSettings,
+                        Settings.SessionSettings,
                         this.BlobStore,
                         session.SessionId);
 
@@ -1352,7 +1352,7 @@ namespace DurableTask
 
                 isSessionSizeThresholdExceeded = true;
 
-                string reason = $"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {Settings.ServiceBusSessionSettings.SessionStreamTerminationThresholdInBytes} bytes";
+                string reason = $"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {Settings.SessionSettings.SessionStreamTerminationThresholdInBytes} bytes";
                 TraceHelper.TraceSession(TraceEventType.Critical, workItem.InstanceId, reason);
 
                 BrokeredMessage forcedTerminateMessage = await CreateForcedTerminateMessageAsync(runtimeState.OrchestrationInstance.InstanceId, reason);
@@ -1440,7 +1440,7 @@ namespace DurableTask
             BrokeredMessage message = await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                 taskMessage,
                 Settings.MessageCompressionSettings,
-                Settings.ServiceBusMessageSettings,
+                Settings.MessageSettings,
                 newOrchestrationInstance,
                 "Forced Terminate",
                 this.BlobStore,

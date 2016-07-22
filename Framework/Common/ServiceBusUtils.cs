@@ -11,18 +11,16 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
-using System.Collections.Generic;
-using DurableTask.History;
-using DurableTask.Tracking;
-
 namespace DurableTask.Common
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
     using System.Threading.Tasks;
     using DurableTask.Settings;
     using DurableTask.Tracing;
+    using DurableTask.Tracking;
     using Microsoft.ServiceBus;
     using Microsoft.ServiceBus.Messaging;
 

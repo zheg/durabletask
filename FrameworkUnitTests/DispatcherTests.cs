@@ -743,7 +743,7 @@ namespace FrameworkUnitTests
 
             ServiceBusOrchestrationService serviceBusOrchestrationService =
                taskHub.orchestrationService as ServiceBusOrchestrationService;
-            serviceBusOrchestrationService.Settings.ServiceBusSessionSettings = new ServiceBusSessionSettings(230 * 1024, 1024 * 1024);
+            serviceBusOrchestrationService.Settings.SessionSettings = new ServiceBusSessionSettings(230 * 1024, 1024 * 1024);
 
             OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof(LargeSessionOrchestration), new Tuple<string, int>(input, 10));
             bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 60, true);
