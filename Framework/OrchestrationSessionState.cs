@@ -30,19 +30,22 @@ namespace DurableTask
         {
         }
 
+        /// <summary>
+        /// Wrap a list of history events into an OrchestrationSessionState instance, which will be later serialized as a stream saved in session state.
+        /// </summary>
+        /// /// <param name="events">A list of history events.</param>
         public OrchestrationSessionState(IList<HistoryEvent> events)
         {
             this.Events = events;
         }
 
+        /// <summary>
+        /// Construct an OrchestrationSessionState instance with a storage key as the blob reference in the external blob storage.
+        /// </summary>
+        /// /// <param name="storageKey"></param>
         public OrchestrationSessionState(string storageKey)
         {
             this.StorageKey = storageKey;
-
-            // generate history events only for serialization/deserialization;
-            // the actual history events are stored exterally with the storage key.
-            this.Events = new List<HistoryEvent>();
-            this.Events.Add(new ExecutionStartedEvent(-1, string.Empty));
         }
 
         /// <summary>

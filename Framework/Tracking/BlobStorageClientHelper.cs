@@ -15,6 +15,9 @@ namespace DurableTask.Tracking
 {
     using System;
 
+    /// <summary>
+    /// A helper class for the Azure blob storage client.
+    /// </summary>
     public class BlobStorageClientHelper
     {
         static readonly string DateFormat = "yyyyMMdd";
@@ -26,6 +29,11 @@ namespace DurableTask.Tracking
         // the delimiter shown in the blob name as the file path
         public static readonly char BlobNameDelimiter = '/';
 
+        /// <summary>
+        /// Build a storage key using the creation time specified.
+        /// </summary>
+        /// <param name="blobCreationTime">The specified creation time</param>
+        /// <returns>The constructed storage key.</returns>
         public static string BuildStorageKey(DateTime blobCreationTime)
         {
             string id = Guid.NewGuid().ToString("N");
@@ -34,6 +42,13 @@ namespace DurableTask.Tracking
               id);
         }
 
+        /// <summary>
+        /// Build a storage key for the message.
+        /// </summary>
+        /// <param name="instanceId">The orchestration instance Id</param>
+        /// <param name="executionId">The orchestration execution Id</param>
+        /// <param name="messageFireTime">The message fire time. If it is DateTime.MinValue, use current date.</param>
+        /// <returns>The constructed storage key for message</returns>
         public static string BuildMessageStorageKey(string instanceId, string executionId, DateTime messageFireTime)
         {
             string id = Guid.NewGuid().ToString("N");
@@ -45,6 +60,11 @@ namespace DurableTask.Tracking
               id);
         }
 
+        /// <summary>
+        /// Build a storage key for the session.
+        /// </summary>
+        /// <param name="sessionId">The session Id</param>
+        /// <returns>The constructed storage key for session</returns>
         public static string BuildSessionStorageKey(string sessionId)
         {
             string id = Guid.NewGuid().ToString("N");
@@ -61,6 +81,12 @@ namespace DurableTask.Tracking
                 DateTime.UtcNow.ToString(DateFormat);
         }
 
+        /// <summary>
+        /// Parse the key for the contianer name suffix and the blob name.
+        /// </summary>
+        /// <param name="key">The input storage key</param>
+        /// <param name="containerNameSuffix">The parsed container name suffix as output</param>
+        /// <param name="blobName">The parsed blob name as output</param>
         public static void ParseKey(string key, out string containerNameSuffix, out string blobName)
         {
             string[] segments = key.Split(BlobStorageClientHelper.KeyDelimiter);
@@ -72,6 +98,12 @@ namespace DurableTask.Tracking
             blobName = key.Substring(containerNameSuffix.Length + 1, key.Length - containerNameSuffix.Length - 1);
         }
 
+        /// <summary>
+        /// Check if the container is expired.
+        /// </summary>
+        /// <param name="containerName">The container name</param>
+        /// <param name="thresholdDateTimeUtc">The specified date threshold</param>
+        /// <returns></returns>
         public static bool IsContainerExpired(string containerName, DateTime thresholdDateTimeUtc)
         {
             string[] segments = containerName.Split(ContainerDelimiter);
@@ -84,6 +116,12 @@ namespace DurableTask.Tracking
             return containerDateTime < thresholdDateTimeUtc;
         }
 
+        /// <summary>
+        /// Build a container name using prefix and suffix.
+        /// </summary>
+        /// <param name="prefix">The container name prefix</param>
+        /// <param name="suffix">The container name suffix</param>
+        /// <returns>The container name</returns>
         public static string BuildContainerName(string prefix, string suffix)
         {
             return $"{prefix}{ContainerDelimiter}{suffix}";

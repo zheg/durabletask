@@ -32,9 +32,25 @@ namespace DurableTask
     /// </summary>
     class RuntimeStateStreamConverter
     {
-        public static async Task<Stream> OrchestrationRuntimeStateToRawStream(OrchestrationRuntimeState newOrchestrationRuntimeState,
-            OrchestrationRuntimeState runtimeState, DataConverter dataConverter, bool shouldCompress,
-            ServiceBusSessionSettings serviceBusSessionSettings, IBlobStore blobStore, string sessionId)
+        /// <summary>
+        /// Convert an OrchestrationRuntimeState instance to a serialized raw strem to be saved in session state.
+        /// </summary>
+        /// <param name="newOrchestrationRuntimeState">The new OrchestrationRuntimeState to be serialized</param>
+        /// <param name="runtimeState">The current runtime state</param>
+        /// <param name="dataConverter">A data converter for serialization and deserialization</param>
+        /// <param name="shouldCompress">True if should compress when serialization</param>
+        /// <param name="serviceBusSessionSettings">The service bus session settings</param>
+        /// <param name="blobStore">A blob store for external blob storage</param>
+        /// <param name="sessionId">The session id</param>
+        /// <returns>A serialized raw strem to be saved in session state</returns>
+        public static async Task<Stream> OrchestrationRuntimeStateToRawStream(
+            OrchestrationRuntimeState newOrchestrationRuntimeState,
+            OrchestrationRuntimeState runtimeState,
+            DataConverter dataConverter,
+            bool shouldCompress,
+            ServiceBusSessionSettings serviceBusSessionSettings,
+            IBlobStore blobStore,
+            string sessionId)
         {
             OrchestrationSessionState orchestrationSessionState = new OrchestrationSessionState(newOrchestrationRuntimeState.Events);
             string serializedState = dataConverter.Serialize(orchestrationSessionState);
@@ -55,21 +71,29 @@ namespace DurableTask
 
             if (runtimeState.CompressedSize > serviceBusSessionSettings.SessionStreamExternalStorageThresholdInBytes)
             {
-                return await CreateStreamForExternalStorageAsync(shouldCompress,
-                        blobStore, sessionId, dataConverter, compressedState);
+                TraceHelper.TraceSession(TraceEventType.Information,
+                    sessionId,
+                    $"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {serviceBusSessionSettings.SessionStreamExternalStorageThresholdInBytes} bytes." +
+                    $"Creating an OrchestrationSessionState instance with key for exteranl storage.");
+                return await CreateStreamForExternalStorageAsync(shouldCompress, blobStore, sessionId, dataConverter, compressedState);
             }
 
             return compressedState;
         }
 
-        async static Task<Stream> CreateStreamForExternalStorageAsync(bool shouldCompress,
-            IBlobStore blobStore, string sessionId, DataConverter dataConverter, Stream compressedState)
+        async static Task<Stream> CreateStreamForExternalStorageAsync(
+            bool shouldCompress,
+            IBlobStore blobStore,
+            string sessionId,
+            DataConverter dataConverter,
+            Stream compressedState)
         {
             if (blobStore == null)
             {
-                throw new ArgumentException($"The compressed session is larger than supported. " +
-                                                    $"Please provide an implementation of IBlobStore for external storage.",
-                            nameof(IBlobStore));
+                throw new ArgumentException(
+                    $"The compressed session is larger than supported. " +
+                    $"Please provide an implementation of IBlobStore for external storage.",
+                    "blobStore");
             }
 
             // create a new orchestration session state with the external storage key
@@ -83,11 +107,22 @@ namespace DurableTask
                 shouldCompress,
                 out streamSize);
 
+            TraceHelper.TraceSession(
+                TraceEventType.Information,
+                sessionId,
+                $"Saving the serialzied stream in external storage with key {key}.");
             await blobStore.SaveStreamWithKeyAsync(key, compressedState);
             return compressedStateForSession;
         }
 
-
+        /// <summary>
+        /// Convert a raw stream to an orchestration runtime state instance.
+        /// </summary>
+        /// <param name="rawSessionStream">The raw session stream to be deserialized</param>
+        /// <param name="sessionId">The session Id</param>
+        /// <param name="blobStore">A blob store for external blob storage</param>
+        /// <param name="dataConverter">>A data converter for serialization and deserialization</param>
+        /// <returns></returns>
         public static async Task<OrchestrationRuntimeState> RawStreamToRuntimeState(Stream rawSessionStream, string sessionId, IBlobStore blobStore, DataConverter dataConverter)
         {
             bool isEmptySession;
@@ -103,16 +138,25 @@ namespace DurableTask
 
             if (string.IsNullOrWhiteSpace(storageKey))
             {         
-                TraceHelper.TraceSession(TraceEventType.Information, sessionId,
+                TraceHelper.TraceSession(
+                    TraceEventType.Information,
+                    sessionId,
                     $"Size of session state is {newSessionStateSize}, compressed {rawSessionStateSize}");
                 return runtimeState;
             }
 
             if (blobStore == null)
             {
-                throw new ArgumentException($"Please provide an implementation of IBlobStore for external storage to load the runtime state.",
-                            nameof(IBlobStore));
+                throw new ArgumentException(
+                    $"Please provide an implementation of IBlobStore for external storage to load the runtime state.",
+                    "blobStore");
             }
+
+            TraceHelper.TraceSession(
+                TraceEventType.Information,
+                sessionId,
+                $"Loading the serialzied stream from external storage with key {storageKey}.");
+
             Stream externalStream = await blobStore.LoadStreamWithKeyAsync(storageKey);
             return await RawStreamToRuntimeState(externalStream, sessionId, blobStore, dataConverter);
         }
@@ -123,7 +167,9 @@ namespace DurableTask
             storageKey = string.Empty;
             if (stateStream == null)
             {
-                TraceHelper.TraceSession(TraceEventType.Information, sessionId,
+                TraceHelper.TraceSession(
+                    TraceEventType.Information,
+                    sessionId,
                     "No session state exists, creating new session state.");
                 runtimeState = new OrchestrationRuntimeState();
             }
@@ -131,7 +177,9 @@ namespace DurableTask
             {
                 if (stateStream.Position != 0)
                 {
-                    throw TraceHelper.TraceExceptionSession(TraceEventType.Error, sessionId,
+                    throw TraceHelper.TraceExceptionSession(
+                        TraceEventType.Error,
+                        sessionId,
                         new ArgumentException("Stream is partially consumed"));
                 }
 
@@ -147,6 +195,22 @@ namespace DurableTask
             return runtimeState;
         }
 
+        /// <summary>
+        /// Deserialize the session state to construct an OrchestrationRuntimeState instance.
+        ///
+        /// The session state string could be one of these:
+        ///     1. a serialized IList<HistoryEvent> (master branch implementation), or
+        ///     2. a serialized OrchestrationRuntimeState instance with the history event list (vnext branch implementation), or
+        ///     3. a serialized OrchestrationSessionState instance with the history event list or a storage key (latest implementation).
+        ///
+        /// So when doing the deserialization, it is done with fallbacks in the order: OrchestrationSessionState -> OrchestrationRuntimeState -> IList<HistoryEvent>, to cover all cases.
+        ///
+        /// </summary>
+        /// <param name="serializedState">The serialized session state</param>
+        /// <param name="dataConverter">A data converter for serialization and deserialization</param>
+        /// <param name="sessionId">The session Id</param>
+        /// <param name="storageKey">The storage key output. Will be set if the state is in external storage.</param>
+        /// <returns>The converted orchestration runtime state.</returns>
         static OrchestrationRuntimeState DeserializeToRuntimeStateWithFallback(string serializedState, DataConverter dataConverter, string sessionId, out string storageKey)
         {
             OrchestrationRuntimeState runtimeState = null;
@@ -160,8 +224,10 @@ namespace DurableTask
             }
             catch (Exception exception)
             {
-                TraceHelper.TraceSession(TraceEventType.Warning, sessionId,
-                   $"Failed to deseriazlize session state to OrchestrationSessionState object: {serializedState}");
+                TraceHelper.TraceSession(
+                    TraceEventType.Warning,
+                    sessionId,
+                    $"Failed to deserialize session state to OrchestrationSessionState object: {serializedState}");
                 try
                 {
                     OrchestrationRuntimeState restoredState =
@@ -171,8 +237,11 @@ namespace DurableTask
                 }
                 catch (Exception e)
                 {
-                    TraceHelper.TraceSession(TraceEventType.Warning, sessionId,
-                        $"Failed to deseriazlize session state to OrchestrationRuntimeState object: {serializedState}");
+                    TraceHelper.TraceSession(
+                        TraceEventType.Warning,
+                        sessionId,
+                        $"Failed to deserialize session state to OrchestrationRuntimeState object: {serializedState}");
+
                     IList<HistoryEvent> events = dataConverter.Deserialize<IList<HistoryEvent>>(serializedState);
                     runtimeState = new OrchestrationRuntimeState(events);
                 }

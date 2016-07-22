@@ -22,6 +22,9 @@ namespace DurableTask.Tracking
     using Microsoft.WindowsAzure.Storage.Blob;
     using Microsoft.WindowsAzure.Storage.RetryPolicies;
 
+    /// <summary>
+    /// A client to access the Azure blob storage.
+    /// </summary>
     public class BlobStorageClient
     {
         // use hubName as the container prefix. 
@@ -35,6 +38,11 @@ namespace DurableTask.Tracking
         static readonly TimeSpan MaximumExecutionTime = TimeSpan.FromSeconds(30);
         static readonly TimeSpan DeltaBackOff = TimeSpan.FromSeconds(5);
 
+        /// <summary>
+        /// Construct a blob storage client instance with hub name and connection string
+        /// </summary>
+        /// <param name="hubName">The hub name</param>
+        /// <param name="connectionString">The connection string</param>
         public BlobStorageClient(string hubName, string connectionString)
         {
             if (string.IsNullOrEmpty(connectionString))
@@ -55,6 +63,12 @@ namespace DurableTask.Tracking
             this.hubName = hubName;
         }
 
+        /// <summary>
+        /// Upload the stream into the blob storage using the specified key.
+        /// </summary>
+        /// <param name="key">The key to uniquely locate and access the blob</param>
+        /// <param name="stream">The stream to be uploaded</param>
+        /// <returns></returns>
         public async Task UploadStreamBlob(string key, Stream stream)
         {
             string containerNameSuffix;
@@ -64,6 +78,11 @@ namespace DurableTask.Tracking
             await cloudBlob.UploadFromStreamAsync(stream);
         }
 
+        /// <summary>
+        /// Download the blob from the storage using key.
+        /// </summary>
+        /// <param name="key">The key to uniquely locate and access the blob</param>
+        /// <returns>A downloaded stream</returns>
         public async Task<Stream> DownloadStreamAsync(string key)
         {
             string containerNameSuffix;
@@ -85,11 +104,20 @@ namespace DurableTask.Tracking
             return cloudBlobContainer.GetBlockBlobReference(blobName);
         }
 
+        /// <summary>
+        /// List all containers of the blob storage, whose prefix is hub name.
+        /// </summary>
+        /// <returns>A list of Azure blob containers</returns>
         public IEnumerable<CloudBlobContainer> ListContainers()
         {
             return blobClient.ListContainers(prefix : hubName);
         }
 
+        /// <summary>
+        /// Delete all contianers that are older than the input threshold date.
+        /// </summary>
+        /// <param name="thresholdDateTimeUtc">The specified date threshold</param>
+        /// <returns></returns>
         public async Task DeleteExpiredContainersAsync(DateTime thresholdDateTimeUtc)
         {
             IEnumerable<CloudBlobContainer> containers = ListContainers();
@@ -97,6 +125,10 @@ namespace DurableTask.Tracking
             await Task.WhenAll(tasks);
         }
 
+        /// <summary>
+        /// Delete all containers with the hub name as prefix.
+        /// </summary>
+        /// <returns></returns>
         public async Task DeleteAllContainersAsync()
         {
             IEnumerable<CloudBlobContainer> containers = ListContainers();

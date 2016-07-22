@@ -111,6 +111,7 @@
     <Compile Include="Settings\ServiceBusMessageSettings.cs" />
     <Compile Include="Settings\ServiceBusOrchestrationServiceSettings.cs" />
     <Compile Include="Settings\ServiceBusSessionSettings.cs" />
+    <Compile Include="Tracking\AzureStorageBlobStore.cs" />
     <Compile Include="Tracking\AzureTableOrchestrationJumpStartEntity.cs" />
     <Compile Include="TrackingWorkItem.cs" />
     <Compile Include="Tracking\AzureTableInstanceStore.cs" />

@@ -27,7 +27,7 @@ namespace DurableTask.Tracking
     /// <summary>
     /// Azure Table Instance store provider to allow storage and lookup for orchestration state event history with query support
     /// </summary>
-    public class AzureTableInstanceStore : IOrchestrationServiceInstanceStore, IBlobStore
+    public class AzureTableInstanceStore : IOrchestrationServiceInstanceStore
     {
         const int MaxDisplayStringLengthForAzureTableColumn = (1024 * 24) - 20;
         const int MaxRetriesTableStore = 5;
@@ -36,7 +36,6 @@ namespace DurableTask.Tracking
         static readonly DataConverter DataConverter = new JsonDataConverter();
 
         readonly AzureTableClient tableClient;
-        readonly BlobStorageClient blobClient;
 
         /// <summary>
         /// Creates a new AzureTableInstanceStore using the supplied hub name and table connection string
@@ -46,7 +45,6 @@ namespace DurableTask.Tracking
         public AzureTableInstanceStore(string hubName, string tableConnectionString)
         {
             this.tableClient = new AzureTableClient(hubName, tableConnectionString);
-            this.blobClient =  new BlobStorageClient(hubName, tableConnectionString);
         }
 
         /// <summary>
@@ -71,8 +69,7 @@ namespace DurableTask.Tracking
         public async Task DeleteStoreAsync()
         {
             await Task.WhenAll(this.tableClient.DeleteTableIfExistsAsync(),
-                this.tableClient.DeleteJumpStartTableIfExistsAsync(),
-                this.blobClient.DeleteAllContainersAsync());
+                this.tableClient.DeleteJumpStartTableIfExistsAsync());
         }
 
         /// <summary>
@@ -276,7 +273,6 @@ namespace DurableTask.Tracking
         {
             TableContinuationToken continuationToken = null;
 
-            await this.blobClient.DeleteExpiredContainersAsync(thresholdDateTimeUtc);
             int purgeCount = 0;
             do
             {
@@ -445,64 +441,6 @@ namespace DurableTask.Tracking
             byte[] tokenBytes = Convert.FromBase64String(serializedContinuationToken);
 
             return DataConverter.Deserialize<TableContinuationToken>(Encoding.Unicode.GetString(tokenBytes));
-        }
-
-        /// <summary>
-        /// Create a storage key based on the creation date.
-        /// This key will be used to save and load the stream in external storage when it is too large.
-        /// </summary>
-        /// <param name="creationDate">The creation date of the blob. Could be DateTime.MinValue if want to use current time.</param>
-        /// <returns>A storage key.</returns>
-        public string BuildStorageKey(DateTime creationDate)
-        {
-            return BlobStorageClientHelper.BuildStorageKey(creationDate);
-        }
-
-        /// <summary>
-        /// Create a storage key based on the orchestrationInstance.
-        /// This key will be used to save and load the stream message in external storage when it is too large.
-        /// </summary>
-        /// <param name="orchestrationInstance">The orchestration instance.</param>
-        /// <param name="messageFireTime">The message fire time.</param>
-        /// <returns>The created storage key.</returns>
-        public string BuildMessageStorageKey(OrchestrationInstance orchestrationInstance, DateTime messageFireTime)
-        {
-            return BlobStorageClientHelper.BuildMessageStorageKey(
-                orchestrationInstance != null ? orchestrationInstance.InstanceId : "null",
-                orchestrationInstance != null ? orchestrationInstance.ExecutionId : "null",
-                messageFireTime);
-        }
-
-        /// <summary>
-        /// Create a storage key based on message session.
-        /// This key will be used to save and load the stream in external storage when it is too large.
-        /// </summary>
-        /// <param name="sessionId">The message session Id.</param>
-        /// <returns>A storage key.</returns>
-        public string BuildSessionStorageKey(string sessionId)
-        {
-            return BlobStorageClientHelper.BuildSessionStorageKey(sessionId);
-        }
-
-        /// <summary>
-        /// Save the stream of the message or seesion using key.
-        /// </summary>
-        /// <param name="key">The storage key.</param>
-        /// <param name="stream">The stream of the message or session.</param>
-        /// <returns></returns>
-        public async Task SaveStreamWithKeyAsync(string key, Stream stream)
-        {
-            await this.blobClient.UploadStreamBlob(key, stream);
-        }
-
-        /// <summary>
-        /// Load the stream of message or seesion from storage using key.
-        /// </summary>
-        /// <param name="key">Teh storage key.</param>
-        /// <returns>The saved stream message or session.</returns>
-        public async Task<Stream> LoadStreamWithKeyAsync(string key)
-        {
-            return await this.blobClient.DownloadStreamAsync(key);
         }
     }
 }

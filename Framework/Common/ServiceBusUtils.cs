@@ -79,31 +79,24 @@ namespace DurableTask.Common
                         brokeredMessage.Properties[FrameworkConstants.CompressionTypePropertyName] =
                             FrameworkConstants.CompressionTypeGzipPropertyValue;
                     }
-                    else if (compressedStream.Length < messageSettings.MaxMessageSizeForBlobInBytes && blobStore != null)
-                    {
-                        // save the compressed stream using external storage when it is larger
-                        // than the supported message size limit.
-                        // the message is stored using the generated key, which is saved in the message property.
-                        string storageKey = blobStore.BuildMessageStorageKey(instance, messageFireTime);
-                        await blobStore.SaveStreamWithKeyAsync(storageKey, compressedStream);
-                        brokeredMessage = new BrokeredMessage();
-                        brokeredMessage.Properties[FrameworkConstants.MessageStorageKey] = storageKey;
-                        brokeredMessage.Properties[FrameworkConstants.CompressionTypePropertyName] =
-                            FrameworkConstants.CompressionTypeGzipPropertyValue;
-                    }
                     else
                     {
-                        throw new ArgumentException($"The compressed message is larger than supported. " +
-                                                    $"Please provide an implementation of IServiceBusMessageStore for external storage.",
-                            nameof(IBlobStore));
+                        brokeredMessage = await GenerateBrokeredMessageWithStorageKeyPropertyAsync(compressedStream, blobStore, instance, messageSettings, messageFireTime, FrameworkConstants.CompressionTypeGzipPropertyValue);
                     }
                 }
                 else
                 {
-                    brokeredMessage = new BrokeredMessage(rawStream, true);
-                    disposeStream = false;
-                    brokeredMessage.Properties[FrameworkConstants.CompressionTypePropertyName] =
-                        FrameworkConstants.CompressionTypeNonePropertyValue;
+                    if (rawStream.Length < messageSettings.MaxMessageSizeInBytes)
+                    {
+                        brokeredMessage = new BrokeredMessage(rawStream, true);
+                        disposeStream = false;
+                        brokeredMessage.Properties[FrameworkConstants.CompressionTypePropertyName] =
+                            FrameworkConstants.CompressionTypeNonePropertyValue;
+                    }
+                    else
+                    {
+                        brokeredMessage = await GenerateBrokeredMessageWithStorageKeyPropertyAsync(rawStream, blobStore, instance, messageSettings, messageFireTime, FrameworkConstants.CompressionTypeNonePropertyValue);
+                    }
                 }
 
                 brokeredMessage.SessionId = instance?.InstanceId;
@@ -119,6 +112,46 @@ namespace DurableTask.Common
                     rawStream.Dispose();
                 }
             }
+        }
+
+        static async Task<BrokeredMessage> GenerateBrokeredMessageWithStorageKeyPropertyAsync(
+            Stream stream,
+            IBlobStore blobStore,
+            OrchestrationInstance instance,
+            ServiceBusMessageSettings messageSettings,
+            DateTime messageFireTime,
+            string compressionType)
+        {
+            if (stream.Length > messageSettings.MaxMessageSizeForBlobInBytes)
+            {
+                throw new ArgumentException(
+                    $"The serialized message size {stream.Length} is larger than the supported external storage blob size {messageSettings.MaxMessageSizeForBlobInBytes}.",
+                    "stream");
+            }
+
+            if (blobStore == null)
+            {
+                throw new ArgumentException(
+                    "Please provide an implementation of IBlobStore for external storage.",
+                    "blobStore");
+            }
+
+            // save the compressed stream using external storage when it is larger
+            // than the supported message size limit.
+            // the stream is stored using the generated key, which is saved in the message property.
+            string storageKey = blobStore.BuildMessageStorageKey(instance, messageFireTime);
+
+            TraceHelper.TraceInstance(
+                TraceEventType.Information,
+                instance,
+                () => "Saving the message stream in blob storage using key {storageKey}.");
+            await blobStore.SaveStreamWithKeyAsync(storageKey, stream);
+
+            BrokeredMessage brokeredMessage = new BrokeredMessage();
+            brokeredMessage.Properties[FrameworkConstants.MessageStorageKey] = storageKey;
+            brokeredMessage.Properties[FrameworkConstants.CompressionTypePropertyName] = compressionType;
+
+            return brokeredMessage;
         }
 
         public static async Task<T> GetObjectFromBrokeredMessageAsync<T>(BrokeredMessage message, IBlobStore blobStore)
@@ -146,7 +179,7 @@ namespace DurableTask.Common
             else if (string.Equals(compressionType, FrameworkConstants.CompressionTypeGzipPropertyValue,
                 StringComparison.OrdinalIgnoreCase))
             {
-                using (var compressedStream = await GetCompressedStream(message, blobStore))
+                using (var compressedStream = await LoadMessageStream(message, blobStore))
                 {
                     if (!Utils.IsGzipStream(compressedStream))
                     {
@@ -164,7 +197,7 @@ namespace DurableTask.Common
             else if (string.Equals(compressionType, FrameworkConstants.CompressionTypeNonePropertyValue,
                 StringComparison.OrdinalIgnoreCase))
             {
-                using (var rawStream = message.GetBody<Stream>())
+                using (var rawStream = await LoadMessageStream(message, blobStore))
                 {
                     deserializedObject = Utils.ReadObjectFromStream<T>(rawStream);
                 }
@@ -179,7 +212,7 @@ namespace DurableTask.Common
             return deserializedObject;
         }
 
-        static async Task<Stream> GetCompressedStream(BrokeredMessage message, IBlobStore blobStore)
+        static async Task<Stream> LoadMessageStream(BrokeredMessage message, IBlobStore blobStore)
         {
             object storageKeyObj = null;
             string storageKey = string.Empty;
@@ -190,6 +223,8 @@ namespace DurableTask.Common
             }
             if (string.IsNullOrEmpty(storageKey))
             {
+                // load the stream from the message directly if the storage key property is not set,
+                // i.e., it is not stored externally
                 return message.GetBody<Stream>();
             }
 
@@ -199,6 +234,7 @@ namespace DurableTask.Common
             {
                 throw new ArgumentException($"Failed to load compressed message from external storage with key: {storageKey}. Please provide an implementation of IServiceBusMessageStore for external storage.", nameof(IBlobStore));
             }
+
             return await blobStore.LoadStreamWithKeyAsync(storageKey);
 
         }

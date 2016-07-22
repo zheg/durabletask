@@ -11,7 +11,6 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
-
 namespace FrameworkUnitTests
 {
     using System;
@@ -21,6 +20,7 @@ namespace FrameworkUnitTests
     using System.Threading;
     using System.Threading.Tasks;
     using DurableTask;
+    using DurableTask.Common;
     using DurableTask.Settings;
     using DurableTask.Test;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -693,6 +693,34 @@ namespace FrameworkUnitTests
                 .StartAsync();
 
             OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof (LargeSessionOrchestration), new Tuple<string, int>(input, 2));
+
+            bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 60, true);
+
+            await Task.Delay(20000);
+
+            OrchestrationState state = await client.GetOrchestrationStateAsync(id);
+
+            Assert.AreEqual(OrchestrationStatus.Completed, state.OrchestrationStatus);
+            Assert.AreEqual($"0:{input}-1:{input}-", LargeSessionOrchestration.Result);
+        }
+
+        [TestMethod]
+        public async Task MessageExceededLimitNoCompressionTest()
+        {
+            string input = TestUtils.GenerateRandomString(150 * 1024);
+
+            ServiceBusOrchestrationService serviceBusOrchestrationService = client.serviceClient as ServiceBusOrchestrationService;
+            serviceBusOrchestrationService.Settings.MessageCompressionSettings = new CompressionSettings
+            {
+                Style = CompressionStyle.Never,
+                ThresholdInBytes = 0
+            };
+
+            await taskHub.AddTaskOrchestrations(typeof(LargeSessionOrchestration))
+                .AddTaskActivities(typeof(LargeSessionTaskActivity))
+                .StartAsync();
+
+            OrchestrationInstance id = await client.CreateOrchestrationInstanceAsync(typeof(LargeSessionOrchestration), new Tuple<string, int>(input, 2));
 
             bool isCompleted = await TestHelpers.WaitForInstanceAsync(client, id, 60, true);
 

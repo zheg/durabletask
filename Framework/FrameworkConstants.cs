@@ -56,7 +56,7 @@ namespace DurableTask
         public const string CompressionTypeGzipPropertyValue = "gzip";
         public const string CompressionTypeNonePropertyValue = "none";
 
-        // service bus message storage key in message property
+        // message storage key in message property
         public const string MessageStorageKey = "MessageStorageKey";
 
         // instance store constants
