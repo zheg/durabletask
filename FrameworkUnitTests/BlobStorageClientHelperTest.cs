@@ -35,15 +35,8 @@ namespace FrameworkUnitTests
             Assert.IsFalse(BlobStorageClientHelper.IsContainerExpired("hubName-message-20150518", dateTime));
             Assert.IsTrue(BlobStorageClientHelper.IsContainerExpired("hubName-message-20140518", dateTime));
 
-            try
-            {
-                BlobStorageClientHelper.IsContainerExpired("invalidContainerName", DateTime.UtcNow);
-                Assert.Fail("ArgumentException must be thrown");
-            }
-            catch (ArgumentException e)
-            {
-                Assert.IsTrue(e.Message.Contains("containerName"), "Exception must contain containerName.");
-            }
+            // invalid contaiers are ignored
+            Assert.IsFalse(BlobStorageClientHelper.IsContainerExpired("invalidContainerName", DateTime.UtcNow));
         }
 
         [TestMethod]

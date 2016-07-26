@@ -20,7 +20,7 @@ namespace DurableTask.Tracking
     /// <summary>
     /// Azure blob storage to allow save and load large blobs, such as message and session, as a stream using Azure blob container.
     /// </summary>
-    public class AzureStorageBlobStore : IBlobStore
+    public class AzureStorageBlobStore : IOrchestrationServiceBlobStore
     {
         readonly BlobStorageClient blobClient;
 
@@ -77,7 +77,7 @@ namespace DurableTask.Tracking
         /// <param name="key">The storage key.</param>
         /// <param name="stream">The stream of the message or session.</param>
         /// <returns></returns>
-        public async Task SaveStreamWithKeyAsync(string key, Stream stream)
+        public async Task SaveStreamAsync(string key, Stream stream)
         {
             await this.blobClient.UploadStreamBlob(key, stream);
         }
@@ -87,7 +87,7 @@ namespace DurableTask.Tracking
         /// </summary>
         /// <param name="key">Teh storage key.</param>
         /// <returns>The saved stream message or session.</returns>
-        public async Task<Stream> LoadStreamWithKeyAsync(string key)
+        public async Task<Stream> LoadStreamAsync(string key)
         {
             return await this.blobClient.DownloadStreamAsync(key);
         }
@@ -101,10 +101,10 @@ namespace DurableTask.Tracking
         }
 
         /// <summary>
-        /// Purges history from storage for given time threshold
+        /// Purges history from storage for a given time threshold
         /// </summary>
         /// <param name="thresholdDateTimeUtc">The datetime in UTC to use as the threshold for purging history</param>
-        public async Task PurgeExpiredContainersAsync(DateTime thresholdDateTimeUtc)
+        public async Task PurgeExpiredBlobsAsync(DateTime thresholdDateTimeUtc)
         {
             await this.blobClient.DeleteExpiredContainersAsync(thresholdDateTimeUtc);
         }

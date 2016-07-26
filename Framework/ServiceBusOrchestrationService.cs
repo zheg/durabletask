@@ -63,7 +63,7 @@ namespace DurableTask
         /// <summary>
         /// Blob store for oversized messages and sessions
         /// </summary>
-        public readonly IBlobStore BlobStore;
+        public readonly IOrchestrationServiceBlobStore OrchestrationServiceBlobStore;
 
         /// <summary>
         /// Statistics for the orchestration service
@@ -96,13 +96,13 @@ namespace DurableTask
         /// <param name="connectionString">Service Bus connection string</param>
         /// <param name="hubName">Hubname to use with the connection string</param>
         /// <param name="instanceStore">Instance store Provider, where state and history messages will be stored</param>
-        /// <param name="blobStore">Blob store Provider, where oversized messages and sessions will be stored</param>
+        /// <param name="orchestrationServiceBlobStore">Blob store Provider, where oversized messages and sessions will be stored</param>
         /// <param name="settings">Settings object for service and client</param>
         public ServiceBusOrchestrationService(
             string connectionString,
             string hubName,
             IOrchestrationServiceInstanceStore instanceStore,
-            IBlobStore blobStore,
+            IOrchestrationServiceBlobStore orchestrationServiceBlobStore,
             ServiceBusOrchestrationServiceSettings settings)
         {
             this.connectionString = connectionString;
@@ -113,7 +113,7 @@ namespace DurableTask
             orchestratorEntityName = string.Format(FrameworkConstants.OrchestratorEndpointFormat, this.hubName);
             trackingEntityName = string.Format(FrameworkConstants.TrackingEndpointFormat, this.hubName);
             this.Settings = settings ?? new ServiceBusOrchestrationServiceSettings();
-            this.BlobStore = blobStore;
+            this.OrchestrationServiceBlobStore = orchestrationServiceBlobStore;
             if (instanceStore != null)
             {
                 this.InstanceStore = instanceStore;
@@ -276,7 +276,12 @@ namespace DurableTask
                 await SafeDeleteQueueAsync(namespaceManager, trackingEntityName);
                 if (deleteInstanceStore)
                 {
-                    await Task.WhenAll(InstanceStore.DeleteStoreAsync(), BlobStore.DeleteStoreAsync());
+                    await InstanceStore.DeleteStoreAsync();
+
+                    if (OrchestrationServiceBlobStore != null)
+                    {
+                        await OrchestrationServiceBlobStore.DeleteStoreAsync();
+                    }
                 }
             }
         }
@@ -437,9 +442,9 @@ namespace DurableTask
             ServiceBusUtils.CheckAndLogDeliveryCount(session.SessionId, newMessages, this.Settings.MaxTaskOrchestrationDeliveryCount);
 
             IList<TaskMessage> newTaskMessages = await Task.WhenAll(
-                newMessages.Select(async message => await ServiceBusUtils.GetObjectFromBrokeredMessageAsync<TaskMessage>(message, this.BlobStore)));
+                newMessages.Select(async message => await ServiceBusUtils.GetObjectFromBrokeredMessageAsync<TaskMessage>(message, this.OrchestrationServiceBlobStore)));
 
-            OrchestrationRuntimeState runtimeState = await GetSessionState(session, this.BlobStore);
+            OrchestrationRuntimeState runtimeState = await GetSessionState(session, this.OrchestrationServiceBlobStore);
 
             long maxSequenceNumber = newMessages
                 .OrderByDescending(message => message.SequenceNumber)
@@ -594,12 +599,12 @@ namespace DurableTask
 
                 if (await TrySetSessionState(workItem, newOrchestrationRuntimeState, runtimeState, session))
                 {
-                    if (runtimeState.CompressedSize > SessionStreamWarningSizeInBytes)
+                    if (runtimeState.CompressedSize > SessionStreamWarningSizeInBytes && runtimeState.CompressedSize < Settings.SessionSettings.SessionOverflowThresholdInBytes)
                     {
                         TraceHelper.TraceSession(
                             TraceEventType.Error, 
                             workItem.InstanceId, 
-                            $"Size of session state ({runtimeState.CompressedSize}B) is nearing session size limit of {Settings.SessionSettings.SessionStreamTerminationThresholdInBytes}B");
+                            $"Size of session state ({runtimeState.CompressedSize}B) is nearing session size limit of {Settings.SessionSettings.SessionOverflowThresholdInBytes}B");
                     }
 
                     // We need to .ToList() the IEnumerable otherwise GetBrokeredMessageFromObjectAsync gets called 5 times per message due to Service Bus doing multiple enumeration
@@ -613,7 +618,7 @@ namespace DurableTask
                                 Settings.MessageSettings,
                                 null,
                                 "Worker outbound message",
-                                this.BlobStore,
+                                this.OrchestrationServiceBlobStore,
                                 DateTime.MinValue))
                             .ToList())
                             );
@@ -633,7 +638,7 @@ namespace DurableTask
                                 Settings.MessageSettings,
                                 newOrchestrationRuntimeState.OrchestrationInstance,
                                 "Timer Message",
-                                this.BlobStore,
+                                this.OrchestrationServiceBlobStore,
                                 messageFireTime);
                                 message.ScheduledEnqueueTimeUtc = messageFireTime;
                                 return message;
@@ -654,7 +659,7 @@ namespace DurableTask
                                 Settings.MessageSettings,
                                 m.OrchestrationInstance,
                                 "Sub Orchestration",
-                                this.BlobStore,
+                                this.OrchestrationServiceBlobStore,
                                 DateTime.MinValue))
                             .ToList())
                             );
@@ -671,7 +676,7 @@ namespace DurableTask
                                 Settings.MessageSettings,
                                 newOrchestrationRuntimeState.OrchestrationInstance,
                                 "Continue as new",
-                                this.BlobStore,
+                                this.OrchestrationServiceBlobStore,
                                 DateTime.MinValue)
                             );
                         this.ServiceStats.OrchestrationDispatcherStats.MessageBatchesSent.Increment();
@@ -784,8 +789,7 @@ namespace DurableTask
                 receivedMessage.SessionId,
                 GetFormattedLog($"New message to process: {receivedMessage.MessageId} [{receivedMessage.SequenceNumber}]"));
 
-            TaskMessage taskMessage = await ServiceBusUtils.GetObjectFromBrokeredMessageAsync<TaskMessage>(receivedMessage,
-                                this.BlobStore);
+            TaskMessage taskMessage = await ServiceBusUtils.GetObjectFromBrokeredMessageAsync<TaskMessage>(receivedMessage, this.OrchestrationServiceBlobStore);
 
             ServiceBusUtils.CheckAndLogDeliveryCount(receivedMessage, Settings.MaxTaskActivityDeliveryCount);
 
@@ -858,7 +862,7 @@ namespace DurableTask
                 Settings.MessageSettings,
                 workItem.TaskMessage.OrchestrationInstance,
                 $"Response for {workItem.TaskMessage.OrchestrationInstance.InstanceId}",
-                this.BlobStore,
+                this.OrchestrationServiceBlobStore,
                 DateTime.MinValue);
 
             var originalMessage = GetAndDeleteBrokeredMessageForWorkItem(workItem);
@@ -981,7 +985,7 @@ namespace DurableTask
                 Settings.MessageSettings,
                 message.OrchestrationInstance,
                 "SendTaskOrchestrationMessage",
-                this.BlobStore,
+                this.OrchestrationServiceBlobStore,
                 DateTime.MinValue);
 
             // Use duplicate detection of ExecutionStartedEvent by addin messageId
@@ -1096,10 +1100,11 @@ namespace DurableTask
 
         /// <summary>
         /// Purges orchestration instance state and history for orchestrations older than the specified threshold time.
+        /// Also purges the blob storage.
         /// </summary>
         /// <param name="thresholdDateTimeUtc">Threshold date time in UTC</param>
         /// <param name="timeRangeFilterType">What to compare the threshold date time against</param>
-        public async Task PurgeOrchestrationInstanceHistoryAsync(
+        public async Task PurgeOrchestrationAsync(
             DateTime thresholdDateTimeUtc,
             OrchestrationStateTimeRangeFilterType timeRangeFilterType)
         {
@@ -1107,10 +1112,17 @@ namespace DurableTask
 
             TraceHelper.Trace(TraceEventType.Information, $"Purging orchestration instances before: {thresholdDateTimeUtc}, Type: {timeRangeFilterType}");
 
-            int purgedEvents = await InstanceStore.PurgeOrchestrationHistoryEventsAsync(thresholdDateTimeUtc, timeRangeFilterType);
-            await this.BlobStore.PurgeExpiredContainersAsync(thresholdDateTimeUtc);
+            if (this.OrchestrationServiceBlobStore != null)
+            {
+                await this.OrchestrationServiceBlobStore.PurgeExpiredBlobsAsync(thresholdDateTimeUtc);
+                TraceHelper.Trace(TraceEventType.Information, $"Blob storage is purged.");
+            }
 
-            TraceHelper.Trace(TraceEventType.Information, $"Purged {purgedEvents} orchestration histories");
+            if (InstanceStore != null)
+            {
+                int purgedEvents = await InstanceStore.PurgeOrchestrationHistoryEventsAsync(thresholdDateTimeUtc, timeRangeFilterType);
+                TraceHelper.Trace(TraceEventType.Information, $"Purged {purgedEvents} orchestration histories");
+            }
         }
 
         /// <summary>
@@ -1148,7 +1160,7 @@ namespace DurableTask
             ServiceBusUtils.CheckAndLogDeliveryCount(newMessages, Settings.MaxTrackingDeliveryCount);
 
             IList<TaskMessage> newTaskMessages = await Task.WhenAll(
-                newMessages.Select(async message => await ServiceBusUtils.GetObjectFromBrokeredMessageAsync<TaskMessage>(message, this.BlobStore)));
+                newMessages.Select(async message => await ServiceBusUtils.GetObjectFromBrokeredMessageAsync<TaskMessage>(message, this.OrchestrationServiceBlobStore)));
 
             var lockTokens = newMessages.ToDictionary(m => m.LockToken, m => m);
             var sessionState = new ServiceBusOrchestrationSession
@@ -1202,7 +1214,7 @@ namespace DurableTask
                         Settings.MessageSettings,
                         runtimeState.OrchestrationInstance,
                         "History Tracking Message",
-                        this.BlobStore,
+                        this.OrchestrationServiceBlobStore,
                         DateTime.MinValue);
                     trackingMessages.Add(trackingMessage);
                 }
@@ -1221,7 +1233,7 @@ namespace DurableTask
                 Settings.MessageSettings,
                 runtimeState.OrchestrationInstance,
                 "State Tracking Message",
-                BlobStore,
+                OrchestrationServiceBlobStore,
                 DateTime.MinValue);
             trackingMessages.Add(brokeredStateMessage);
 
@@ -1352,12 +1364,12 @@ namespace DurableTask
             return input;
         }
 
-        async Task<OrchestrationRuntimeState> GetSessionState(MessageSession session, IBlobStore blobStore)
+        async Task<OrchestrationRuntimeState> GetSessionState(MessageSession session, IOrchestrationServiceBlobStore orchestrationServiceBlobStore)
         {
             using (Stream rawSessionStream = await session.GetStateAsync())
             {
                 this.ServiceStats.OrchestrationDispatcherStats.SessionGets.Increment();
-                return await RuntimeStateStreamConverter.RawStreamToRuntimeState(rawSessionStream, session.SessionId, blobStore, DataConverter);
+                return await RuntimeStateStreamConverter.RawStreamToRuntimeState(rawSessionStream, session.SessionId, orchestrationServiceBlobStore, DataConverter);
             }
 			    
         }
@@ -1385,13 +1397,13 @@ namespace DurableTask
                         DataConverter,
                         Settings.TaskOrchestrationDispatcherSettings.CompressOrchestrationState,
                         Settings.SessionSettings,
-                        this.BlobStore,
+                        this.OrchestrationServiceBlobStore,
                         session.SessionId);
 
                 await session.SetStateAsync(rawStream);
                 this.ServiceStats.OrchestrationDispatcherStats.SessionSets.Increment();
             }
-            catch (ArgumentException exception)
+            catch (Exception exception) when (exception is ArgumentException || exception is OrchestrationException)
             {
                 // basic idea is to simply enqueue a terminate message just like how we do it from taskhubclient
                 // it is possible to have other messages in front of the queue and those will get processed before
@@ -1405,7 +1417,7 @@ namespace DurableTask
 
                 isSessionSizeThresholdExceeded = true;
 
-                string reason = $"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {Settings.SessionSettings.SessionStreamTerminationThresholdInBytes} bytes";
+                string reason = $"Session state size of {runtimeState.CompressedSize} exceeded the termination threshold of {Settings.SessionSettings.SessionMaxSizeInBytes} bytes";
                 TraceHelper.TraceSession(TraceEventType.Critical, workItem.InstanceId, reason);
 
                 BrokeredMessage forcedTerminateMessage = await CreateForcedTerminateMessageAsync(runtimeState.OrchestrationInstance.InstanceId, reason);
@@ -1509,7 +1521,7 @@ namespace DurableTask
                 Settings.MessageSettings,
                 newOrchestrationInstance,
                 "Forced Terminate",
-                this.BlobStore,
+                this.OrchestrationServiceBlobStore,
                 DateTime.MinValue);
 
             return message;

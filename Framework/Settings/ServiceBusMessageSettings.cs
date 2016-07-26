@@ -15,28 +15,30 @@ namespace DurableTask.Settings
 {
     /// <summary>
     ///     Settings to configure the Service Bus message.
+    ///     TODO: add a flag OverflowEnabled to indicate if the overflow settings are enabled
     /// </summary>
     public class ServiceBusMessageSettings
     {
         internal ServiceBusMessageSettings()
         {
-            MaxMessageSizeInBytes = 170 * 1024;
-            MaxMessageSizeForBlobInBytes = 10 * 1024 * 1024;
+            MessageOverflowThresholdInBytes = 170 * 1024;
+            MessageMaxSizeInBytes = 10 * 1024 * 1024;
         }
-        internal ServiceBusMessageSettings(int maxMessageSizeInBytes, int maxMessageSizeForBlobInBytes)
+
+        internal ServiceBusMessageSettings(int messageOverflowThresholdInBytes, int messageMaxSizeInBytes)
         {
-            MaxMessageSizeInBytes = maxMessageSizeInBytes;
-            MaxMessageSizeForBlobInBytes = maxMessageSizeForBlobInBytes;
+            MessageOverflowThresholdInBytes = messageOverflowThresholdInBytes;
+            MessageMaxSizeInBytes = messageMaxSizeInBytes;
         }
 
         /// <summary>
-        ///     The max allowed message size after compression in service bus. Default is 170K.
+        ///     The max allowed message size in service bus. Default is 170K.
         /// </summary>
-        public int MaxMessageSizeInBytes { get; set; }
+        public int MessageOverflowThresholdInBytes { get; set; }
 
         /// <summary>
         ///    The max allowed message size for external storage. Default is 10M.
         /// </summary>
-        public int MaxMessageSizeForBlobInBytes { get; set; }
+        public int MessageMaxSizeInBytes { get; set; }
     }
 }

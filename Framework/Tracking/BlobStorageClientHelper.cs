@@ -11,6 +11,9 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
+using System.Diagnostics;
+using DurableTask.Tracing;
+
 namespace DurableTask.Tracking
 {
     using System;
@@ -21,9 +24,9 @@ namespace DurableTask.Tracking
     public class BlobStorageClientHelper
     {
         static readonly string DateFormat = "yyyyMMdd";
-        static readonly char ContainerDelimiter = '-';
+        static readonly char ContainerNameDelimiter = '-';
 
-        // the blob storage accesss key is in the format of {DateTime}|{bolbName}
+        // the blob storage accesss key is in the format of {DateTime}|{blobName}
         public static readonly char KeyDelimiter = '|';
 
         // the delimiter shown in the blob name as the file path
@@ -37,9 +40,7 @@ namespace DurableTask.Tracking
         public static string BuildStorageKey(DateTime blobCreationTime)
         {
             string id = Guid.NewGuid().ToString("N");
-            return string.Format("blob{0}{2}{1}{3}", ContainerDelimiter, KeyDelimiter,
-              GetDateStringForContainerName(blobCreationTime),
-              id);
+            return $"blob{ContainerNameDelimiter}{GetDateStringForContainerName(blobCreationTime)}{KeyDelimiter}{id}";
         }
 
         /// <summary>
@@ -52,12 +53,15 @@ namespace DurableTask.Tracking
         public static string BuildMessageStorageKey(string instanceId, string executionId, DateTime messageFireTime)
         {
             string id = Guid.NewGuid().ToString("N");
-            return string.Format("message{0}{2}{1}{3}{4}{5}{4}{6}", ContainerDelimiter, KeyDelimiter,
-              GetDateStringForContainerName(messageFireTime),
-              instanceId,
-              BlobNameDelimiter,
-              executionId,
-              id);
+            return string.Format(
+                "message{0}{2}{1}{3}{4}{5}{4}{6}",
+                ContainerNameDelimiter,
+                KeyDelimiter,
+                GetDateStringForContainerName(messageFireTime),
+                instanceId,
+                BlobNameDelimiter,
+                executionId,
+                id);
         }
 
         /// <summary>
@@ -68,8 +72,14 @@ namespace DurableTask.Tracking
         public static string BuildSessionStorageKey(string sessionId)
         {
             string id = Guid.NewGuid().ToString("N");
-            return string.Format("session{0}{2}{1}{3}{4}{5}", ContainerDelimiter, KeyDelimiter,
-              GetDateStringForContainerName(DateTime.MinValue), sessionId, BlobNameDelimiter, id);
+            return string.Format(
+                "session{0}{2}{1}{3}{4}{5}",
+                ContainerNameDelimiter,
+                KeyDelimiter,
+                GetDateStringForContainerName(DateTime.MinValue),
+                sessionId,
+                BlobNameDelimiter,
+                id);
         }
 
         // use the message fire time if it is set;
@@ -82,20 +92,20 @@ namespace DurableTask.Tracking
         }
 
         /// <summary>
-        /// Parse the key for the contianer name suffix and the blob name.
+        /// Parse the key for the container name suffix and the blob name.
         /// </summary>
         /// <param name="key">The input storage key</param>
         /// <param name="containerNameSuffix">The parsed container name suffix as output</param>
         /// <param name="blobName">The parsed blob name as output</param>
         public static void ParseKey(string key, out string containerNameSuffix, out string blobName)
         {
-            string[] segments = key.Split(BlobStorageClientHelper.KeyDelimiter);
+            string[] segments = key.Split(new[] {BlobStorageClientHelper.KeyDelimiter}, 2);
             if (segments.Length < 2)
             {
-                throw new ArgumentException("storage key does not contain required 2 or more segments: {containerNameSuffix}|{blobName}.", nameof(key));
+                throw new ArgumentException("storage key {key} does not contain required 2 or more segments: containerNameSuffix|blobName.", nameof(key));
             }
             containerNameSuffix = segments[0];
-            blobName = key.Substring(containerNameSuffix.Length + 1, key.Length - containerNameSuffix.Length - 1);
+            blobName = segments[1];
         }
 
         /// <summary>
@@ -106,13 +116,17 @@ namespace DurableTask.Tracking
         /// <returns></returns>
         public static bool IsContainerExpired(string containerName, DateTime thresholdDateTimeUtc)
         {
-            string[] segments = containerName.Split(ContainerDelimiter);
+            string[] segments = containerName.Split(ContainerNameDelimiter);
             if (segments.Length != 3)
             {
-                throw new ArgumentException("container name does not contain required 3 segments.", nameof(containerName));
+                TraceHelper.Trace(
+                    TraceEventType.Warning,
+                    $"container name {containerName} does not contain required 3 segments.");
+
+                return false;
             }
 
-            DateTime containerDateTime = DateTime.ParseExact(segments[2], DateFormat, System.Globalization.CultureInfo.InvariantCulture);
+            DateTime containerDateTime = DateTime.ParseExact(segments[segments.Length - 1], DateFormat, System.Globalization.CultureInfo.InvariantCulture);
             return containerDateTime < thresholdDateTimeUtc;
         }
 
@@ -124,7 +138,7 @@ namespace DurableTask.Tracking
         /// <returns>The container name</returns>
         public static string BuildContainerName(string prefix, string suffix)
         {
-            return $"{prefix}{ContainerDelimiter}{suffix}";
+            return $"{prefix}{ContainerNameDelimiter}{suffix}";
         }
     }
 }

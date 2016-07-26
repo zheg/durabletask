@@ -15,28 +15,30 @@ namespace DurableTask.Settings
 {
     /// <summary>
     ///     Settings to configure the Service Bus session.
+    ///     TODO: add a flag OverflowEnabled to indicate if the overflow settings are enabled
     /// </summary>
     public class ServiceBusSessionSettings
     {     
         internal ServiceBusSessionSettings()
         {
-            SessionStreamExternalStorageThresholdInBytes = 230 * 1024;
-            SessionStreamTerminationThresholdInBytes = 10 * 1024 * 1024;
+            SessionOverflowThresholdInBytes = 230 * 1024;
+            SessionMaxSizeInBytes = 10 * 1024 * 1024;
         }
-        internal ServiceBusSessionSettings(int sessionStreamExternalStorageThresholdInBytes, int sessionStreamTerminationThresholdInBytes)
+
+        internal ServiceBusSessionSettings(int sessionOverflowThresholdInBytes, int sessionMaxSizeInBytes)
         {
-            SessionStreamExternalStorageThresholdInBytes = sessionStreamExternalStorageThresholdInBytes;
-            SessionStreamTerminationThresholdInBytes = sessionStreamTerminationThresholdInBytes;
+            SessionOverflowThresholdInBytes = sessionOverflowThresholdInBytes;
+            SessionMaxSizeInBytes = sessionMaxSizeInBytes;
         }
 
         /// <summary>
-        ///     The threshold for external storage of session in stream. Default is 230K.
+        ///     The max allowed session size in service bus. Default is 230K.
         /// </summary>
-        public int SessionStreamExternalStorageThresholdInBytes { get; set; }
+        public int SessionOverflowThresholdInBytes { get; set; }
 
         /// <summary>
-        ///     The threshold of session for orchestration termination. Default is 10M.
+        ///     The max allowed session size for external storage. Default is 10M.
         /// </summary>
-        public int SessionStreamTerminationThresholdInBytes { get; set; }
+        public int SessionMaxSizeInBytes { get; set; }
     }
 }

@@ -99,6 +99,7 @@ namespace DurableTask.Settings
         ///     Enable compression of messages. Allows exchange of larger parameters and return values with activities at the cost
         ///     of additional CPU.
         ///     Default is false.
+        ///     TODO: move this setting into ServiceBusSessionSettings and ServiceBusMessageSettings.
         /// </summary>
         public CompressionSettings MessageCompressionSettings { get; set; }
 

@@ -11,6 +11,7 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
+using DurableTask.Exceptions;
 using DurableTask.Settings;
 
 namespace FrameworkUnitTests
@@ -29,13 +30,14 @@ namespace FrameworkUnitTests
     [TestClass]
     public class RuntimeStateStreamConverterTest
     {
-        const int SessionStreamExternalStorageThresholdInBytes = 2 * 1024;
-        const int SessionStreamTerminationThresholdInBytes = 10 * 1024;
+        const int sessionOverflowThresholdInBytes = 2 * 1024;
+        const int sessionMaxSizeInBytes = 10 * 1024;
         const string sessionId = "session123";
-        ServiceBusSessionSettings serviceBusSessionSettings = new ServiceBusSessionSettings(SessionStreamExternalStorageThresholdInBytes, SessionStreamTerminationThresholdInBytes);
+        ServiceBusSessionSettings serviceBusSessionSettings = new ServiceBusSessionSettings(sessionOverflowThresholdInBytes, sessionMaxSizeInBytes);
 
         AzureTableInstanceStore azureTableInstanceStore;
         AzureStorageBlobStore azureStorageBlobStore;
+
         [TestInitialize]
         public void TestInitialize()
         {
@@ -147,7 +149,7 @@ namespace FrameworkUnitTests
             catch (ArgumentException e)
             {
                 // expected
-                Assert.IsTrue(e.Message.Contains("blobStore"), "Exception must contain blobStore.");
+                Assert.IsTrue(e.Message.Contains("IOrchestrationServiceBlobStore"), "Exception must contain IOrchestrationServiceBlobStore.");
             }
         }
 
@@ -172,7 +174,7 @@ namespace FrameworkUnitTests
                     sessionId);
                 Assert.Fail("ArgumentException must be thrown");
             }
-            catch (ArgumentException e)
+            catch (OrchestrationException e)
             {
                 // expected
             }

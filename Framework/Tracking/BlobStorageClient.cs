@@ -47,17 +47,16 @@ namespace DurableTask.Tracking
         {
             if (string.IsNullOrEmpty(connectionString))
             {
-                throw new ArgumentException("Invalid connection string", "connectionString");
+                throw new ArgumentException("Invalid connection string", nameof(connectionString));
             }
 
             if (string.IsNullOrEmpty(hubName))
             {
-                throw new ArgumentException("Invalid hub name", "hubName");
+                throw new ArgumentException("Invalid hub name", nameof(hubName));
             }
 
             blobClient = CloudStorageAccount.Parse(connectionString).CreateCloudBlobClient();
-            blobClient.DefaultRequestOptions.RetryPolicy = new ExponentialRetry(DeltaBackOff,
-               MaxRetries);
+            blobClient.DefaultRequestOptions.RetryPolicy = new ExponentialRetry(DeltaBackOff, MaxRetries);
             blobClient.DefaultRequestOptions.MaximumExecutionTime = MaximumExecutionTime;
 
             this.hubName = hubName;

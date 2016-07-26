@@ -20,7 +20,7 @@ namespace DurableTask.Tracking
     /// <summary>
     /// Interface to allow save and load large blobs, such as message and session, as a stream using a storage store.
     /// </summary>
-    public interface IBlobStore
+    public interface IOrchestrationServiceBlobStore
     {
         /// <summary>
         /// Create a storage key based on the creation date.
@@ -53,14 +53,14 @@ namespace DurableTask.Tracking
         /// <param name="key">The storage key.</param>
         /// <param name="stream">The stream of the message or session.</param>
         /// <returns></returns>
-        Task SaveStreamWithKeyAsync(string key, Stream stream);
+        Task SaveStreamAsync(string key, Stream stream);
 
         /// <summary>
         /// Load the stream of message or seesion from storage using key.
         /// </summary>
         /// <param name="key">Teh storage key.</param>
         /// <returns>The saved stream message or session.</returns>
-        Task<Stream> LoadStreamWithKeyAsync(string key);
+        Task<Stream> LoadStreamAsync(string key);
 
         /// <summary>
         /// Deletes the blob store
@@ -71,7 +71,6 @@ namespace DurableTask.Tracking
         /// Purges expired containers from storage for given time threshold
         /// </summary>
         /// <param name="thresholdDateTimeUtc">The datetime in UTC to use as the threshold for purging containers</param>
-        Task PurgeExpiredContainersAsync(DateTime thresholdDateTimeUtc);
-
+        Task PurgeExpiredBlobsAsync(DateTime thresholdDateTimeUtc);
     }
 }
