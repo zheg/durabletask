@@ -11,9 +11,6 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
-using DurableTask.Exceptions;
-using DurableTask.Settings;
-
 namespace FrameworkUnitTests
 {
     using System;
@@ -23,8 +20,10 @@ namespace FrameworkUnitTests
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using DurableTask;
     using DurableTask.Common;
+    using DurableTask.Exceptions;
     using DurableTask.History;
     using DurableTask.Serializing;
+    using DurableTask.Settings;
     using DurableTask.Tracking;
 
     [TestClass]

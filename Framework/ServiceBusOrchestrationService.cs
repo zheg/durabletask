@@ -277,12 +277,12 @@ namespace DurableTask
                 if (deleteInstanceStore)
                 {
                     await InstanceStore.DeleteStoreAsync();
-
-                    if (OrchestrationServiceBlobStore != null)
-                    {
-                        await OrchestrationServiceBlobStore.DeleteStoreAsync();
-                    }
                 }
+            }
+
+            if (OrchestrationServiceBlobStore != null)
+            {
+                await OrchestrationServiceBlobStore.DeleteStoreAsync();
             }
         }
 

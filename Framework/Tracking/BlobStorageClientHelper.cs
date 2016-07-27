@@ -11,12 +11,11 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
-using System.Diagnostics;
-using DurableTask.Tracing;
-
 namespace DurableTask.Tracking
 {
     using System;
+    using System.Diagnostics;
+    using DurableTask.Tracing;
 
     /// <summary>
     /// A helper class for the Azure blob storage client.
