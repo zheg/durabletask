@@ -90,10 +90,9 @@ namespace DurableTask.Serializing
         {
             if (orchestrationServiceBlobStore == null)
             {
-                throw new ArgumentException(
-                    $"The compressed session is larger than supported. " +
-                    $"Please provide an implementation of IOrchestrationServiceBlobStore for external storage.",
-                    nameof(orchestrationServiceBlobStore));
+                throw new OrchestrationException(
+                    "The compressed session is larger than supported. " +
+                    "Please provide an implementation of IOrchestrationServiceBlobStore for external storage.");
             }
 
             // create a new orchestration session state with the external storage key

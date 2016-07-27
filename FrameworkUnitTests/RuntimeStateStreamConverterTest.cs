@@ -145,10 +145,9 @@ namespace FrameworkUnitTests
                         sessionId);
                 Assert.Fail("ArgumentException must be thrown");
             }
-            catch (ArgumentException e)
+            catch (OrchestrationException e)
             {
                 // expected
-                Assert.IsTrue(e.Message.Contains("IOrchestrationServiceBlobStore"), "Exception must contain IOrchestrationServiceBlobStore.");
             }
         }
 
