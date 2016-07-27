@@ -87,6 +87,6 @@ namespace DurableTask
         /// </summary>
         /// <param name="thresholdDateTimeUtc">Threshold date time in UTC</param>
         /// <param name="timeRangeFilterType">What to compare the threshold date time against</param>
-        Task PurgeOrchestrationAsync(DateTime thresholdDateTimeUtc, OrchestrationStateTimeRangeFilterType timeRangeFilterType);
+        Task PurgeOrchestrationHistoryAsync(DateTime thresholdDateTimeUtc, OrchestrationStateTimeRangeFilterType timeRangeFilterType);
     }
 }

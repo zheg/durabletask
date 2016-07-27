@@ -337,7 +337,7 @@ namespace DurableTask
         public Task PurgeOrchestrationInstanceHistoryAsync(DateTime thresholdDateTimeUtc,
             OrchestrationStateTimeRangeFilterType timeRangeFilterType)
         {
-            return this.serviceClient.PurgeOrchestrationAsync(thresholdDateTimeUtc, timeRangeFilterType);
+            return this.serviceClient.PurgeOrchestrationHistoryAsync(thresholdDateTimeUtc, timeRangeFilterType);
         }
     }
 }

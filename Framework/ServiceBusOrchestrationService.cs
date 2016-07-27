@@ -1104,12 +1104,10 @@ namespace DurableTask
         /// </summary>
         /// <param name="thresholdDateTimeUtc">Threshold date time in UTC</param>
         /// <param name="timeRangeFilterType">What to compare the threshold date time against</param>
-        public async Task PurgeOrchestrationAsync(
+        public async Task PurgeOrchestrationHistoryAsync(
             DateTime thresholdDateTimeUtc,
             OrchestrationStateTimeRangeFilterType timeRangeFilterType)
         {
-            ThrowIfInstanceStoreNotConfigured();
-
             TraceHelper.Trace(TraceEventType.Information, $"Purging orchestration instances before: {thresholdDateTimeUtc}, Type: {timeRangeFilterType}");
 
             if (this.BlobStore != null)
@@ -1403,7 +1401,7 @@ namespace DurableTask
                 await session.SetStateAsync(rawStream);
                 this.ServiceStats.OrchestrationDispatcherStats.SessionSets.Increment();
             }
-            catch (Exception exception) when (exception is ArgumentException || exception is OrchestrationException)
+            catch (OrchestrationException exception)
             {
                 // basic idea is to simply enqueue a terminate message just like how we do it from taskhubclient
                 // it is possible to have other messages in front of the queue and those will get processed before

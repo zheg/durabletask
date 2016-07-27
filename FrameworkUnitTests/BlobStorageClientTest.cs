@@ -33,7 +33,7 @@ namespace FrameworkUnitTests
         {
             var r = new Random();
             blobStorageClient = new BlobStorageClient(
-                "test00" + r.Next(0, 10000),
+                "Test00" + r.Next(0, 10000),
                 TestHelpers.GetTestSetting("StorageConnectionString"));
         }
 

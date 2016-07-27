@@ -35,7 +35,7 @@ namespace FrameworkUnitTests
             Assert.IsFalse(BlobStorageClientHelper.IsContainerExpired("hubName-message-20150518", dateTime));
             Assert.IsTrue(BlobStorageClientHelper.IsContainerExpired("hubName-message-20140518", dateTime));
 
-            // invalid contaiers are ignored
+            // invalid containers are ignored
             Assert.IsFalse(BlobStorageClientHelper.IsContainerExpired("invalidContainerName", DateTime.UtcNow));
         }
 
@@ -72,7 +72,7 @@ namespace FrameworkUnitTests
         {
             string sessionId = "abc";
             string key = BlobStorageClientHelper.BuildSessionStorageKey(sessionId);
-            Regex regex = new Regex(@"session-\d{8}|abc/\w{32}$");
+            Regex regex = new Regex(@"^session-\d{8}|abc/\w{32}$");
             Assert.IsTrue(regex.Match(key).Success);
         }
 
@@ -95,6 +95,17 @@ namespace FrameworkUnitTests
             catch (ArgumentException e)
             {
                 Assert.IsTrue(e.Message.Contains("key"), "Exception must contain key.");
+            }
+
+            try
+            {
+                // invalid container name suffix: only lower case letters and numbers are allowed
+                BlobStorageClientHelper.ParseKey("Message-20100319|aa/bb/cc", out containerSuffix, out blobName);
+                Assert.Fail("ArgumentException must be thrown");
+            }
+            catch (ArgumentException e)
+            {
+                Assert.IsTrue(e.Message.Contains("containerNameSuffix"), "Exception must contain containerNameSuffix.");
             }
         }
     }

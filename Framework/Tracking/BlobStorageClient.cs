@@ -59,7 +59,9 @@ namespace DurableTask.Tracking
             blobClient.DefaultRequestOptions.RetryPolicy = new ExponentialRetry(DeltaBackOff, MaxRetries);
             blobClient.DefaultRequestOptions.MaximumExecutionTime = MaximumExecutionTime;
 
-            this.hubName = hubName;
+            // save the lower case since it will be used as the prefix of the container name,
+            // which only allows lower case letters
+            this.hubName = hubName.ToLower();
         }
 
         /// <summary>

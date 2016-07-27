@@ -15,6 +15,7 @@ namespace DurableTask.Tracking
 {
     using System;
     using System.Diagnostics;
+    using System.Text.RegularExpressions;
     using DurableTask.Tracing;
 
     /// <summary>
@@ -39,7 +40,7 @@ namespace DurableTask.Tracking
         public static string BuildStorageKey(DateTime blobCreationTime)
         {
             string id = Guid.NewGuid().ToString("N");
-            return $"blob{ContainerNameDelimiter}{GetDateStringForContainerName(blobCreationTime)}{KeyDelimiter}{id}";
+            return $"{BuildContainerNameSuffix("blob", blobCreationTime)}{KeyDelimiter}{id}";
         }
 
         /// <summary>
@@ -53,14 +54,18 @@ namespace DurableTask.Tracking
         {
             string id = Guid.NewGuid().ToString("N");
             return string.Format(
-                "message{0}{2}{1}{3}{4}{5}{4}{6}",
-                ContainerNameDelimiter,
+                "{0}{1}{2}{3}{4}{3}{5}",
+                BuildContainerNameSuffix("message", messageFireTime),
                 KeyDelimiter,
-                GetDateStringForContainerName(messageFireTime),
                 instanceId,
                 BlobNameDelimiter,
                 executionId,
                 id);
+        }
+
+        static string BuildContainerNameSuffix(string containerType, DateTime blobCreationTime)
+        {
+            return $"{containerType.ToLower()}{ContainerNameDelimiter}{GetDateStringForContainerName(blobCreationTime)}";
         }
 
         /// <summary>
@@ -72,10 +77,9 @@ namespace DurableTask.Tracking
         {
             string id = Guid.NewGuid().ToString("N");
             return string.Format(
-                "session{0}{2}{1}{3}{4}{5}",
-                ContainerNameDelimiter,
+                "{0}{1}{2}{3}{4}",
+                BuildContainerNameSuffix("session", DateTime.MinValue),
                 KeyDelimiter,
-                GetDateStringForContainerName(DateTime.MinValue),
                 sessionId,
                 BlobNameDelimiter,
                 id);
@@ -103,8 +107,29 @@ namespace DurableTask.Tracking
             {
                 throw new ArgumentException("storage key {key} does not contain required 2 or more segments: containerNameSuffix|blobName.", nameof(key));
             }
+
             containerNameSuffix = segments[0];
+            if (!IsValidContainerNameSuffix(containerNameSuffix))
+            {
+                throw new ArgumentException(
+                    $"Not a valid container name suffix: {containerNameSuffix}. " +
+                    "Container name suffix can contain only lower case letters, numbers, and the dash (-) character.",
+                    nameof(containerNameSuffix));
+            }
+
             blobName = segments[1];
+        }
+
+        /// <summary>
+        /// Validate the container name suffix.
+        /// Container name suffix can contain only lower case letters, numbers, and the dash (-) character.
+        /// </summary>
+        /// <param name="containerNameSuffix"></param>
+        /// <returns>True if the container name suffix is valid.</returns>
+        static bool IsValidContainerNameSuffix(string containerNameSuffix)
+        {
+            Regex regex = new Regex(@"^[a-z0-9\\-]+$");
+            return regex.Match(containerNameSuffix).Success;
         }
 
         /// <summary>
