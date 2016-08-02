@@ -111,7 +111,7 @@ namespace DurableTask.Tracking
         /// <returns>A list of Azure blob containers</returns>
         public IEnumerable<CloudBlobContainer> ListContainers()
         {
-            return blobClient.ListContainers(prefix : hubName);
+            return blobClient.ListContainers(hubName);
         }
 
         /// <summary>
