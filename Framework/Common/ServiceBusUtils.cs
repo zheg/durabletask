@@ -137,7 +137,7 @@ namespace DurableTask.Common
             // save the compressed stream using external storage when it is larger
             // than the supported message size limit.
             // the stream is stored using the generated key, which is saved in the message property.
-            string storageKey = orchestrationServiceBlobStore.BuildMessageStorageKey(instance, messageFireTime);
+            string storageKey = orchestrationServiceBlobStore.BuildMessageBlobKey(instance, messageFireTime);
 
             TraceHelper.TraceInstance(
                 TraceEventType.Information,

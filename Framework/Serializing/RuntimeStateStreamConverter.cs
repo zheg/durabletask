@@ -28,7 +28,7 @@ namespace DurableTask.Serializing
     /// <summary>
     /// A converter that does conversion between the OrchestrationRuntimeState instance and a stream after serialization.
     /// The stream is a serialized OrchestrationSessionState that will set as session state.
-    /// De-serialization is done with fallbacks in the order: OrchestrationSessionState -> OrchestrationRuntimeState -> IList<HistoryEvent>.
+    /// De-serialization is done with fallbacks in the order: OrchestrationSessionState -> OrchestrationRuntimeState -> IList of HistoryEvent.
     /// </summary>
     class RuntimeStateStreamConverter
     {
@@ -96,7 +96,7 @@ namespace DurableTask.Serializing
             }
 
             // create a new orchestration session state with the external storage key
-            string key = orchestrationServiceBlobStore.BuildSessionStorageKey(sessionId);
+            string key = orchestrationServiceBlobStore.BuildSessionBlobKey(sessionId);
             OrchestrationSessionState orchestrationSessionState = new OrchestrationSessionState(key);
 
             string serializedStateExternal = dataConverter.Serialize(orchestrationSessionState);
@@ -197,11 +197,11 @@ namespace DurableTask.Serializing
         /// Deserialize the session state to construct an OrchestrationRuntimeState instance.
         ///
         /// The session state string could be one of these:
-        ///     1. a serialized IList<HistoryEvent> (master branch implementation), or
+        ///     1. a serialized IList of HistoryEvent (master branch implementation), or
         ///     2. a serialized OrchestrationRuntimeState instance with the history event list (vnext branch implementation), or
         ///     3. a serialized OrchestrationSessionState instance with the history event list or a storage key (latest implementation).
         ///
-        /// So when doing the deserialization, it is done with fallbacks in the order: OrchestrationSessionState -> OrchestrationRuntimeState -> IList<HistoryEvent>, to cover all cases.
+        /// So when doing the deserialization, it is done with fallbacks in the order: OrchestrationSessionState -> OrchestrationRuntimeState -> IList of HistoryEvent, to cover all cases.
         ///
         /// </summary>
         /// <param name="serializedState">The serialized session state</param>
@@ -225,7 +225,7 @@ namespace DurableTask.Serializing
                 TraceHelper.TraceSession(
                     TraceEventType.Warning,
                     sessionId,
-                    $"Failed to deserialize session state to OrchestrationSessionState object: {serializedState}");
+                    $"Failed to deserialize session state to OrchestrationSessionState object: {serializedState}. More info: {exception.StackTrace}");
                 try
                 {
                     OrchestrationRuntimeState restoredState =
@@ -238,7 +238,7 @@ namespace DurableTask.Serializing
                     TraceHelper.TraceSession(
                         TraceEventType.Warning,
                         sessionId,
-                        $"Failed to deserialize session state to OrchestrationRuntimeState object: {serializedState}");
+                        $"Failed to deserialize session state to OrchestrationRuntimeState object: {serializedState}. More info: {e.StackTrace}");
 
                     IList<HistoryEvent> events = dataConverter.Deserialize<IList<HistoryEvent>>(serializedState);
                     runtimeState = new OrchestrationRuntimeState(events);

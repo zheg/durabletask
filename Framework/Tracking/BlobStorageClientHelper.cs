@@ -26,22 +26,15 @@ namespace DurableTask.Tracking
         static readonly string DateFormat = "yyyyMMdd";
         static readonly char ContainerNameDelimiter = '-';
 
-        // the blob storage accesss key is in the format of {DateTime}|{blobName}
+        /// <summary>
+        /// the blob storage accesss key is in the format of {DateTime}|{blobName}
+        /// </summary>
         public static readonly char KeyDelimiter = '|';
 
-        // the delimiter shown in the blob name as the file path
-        public static readonly char BlobNameDelimiter = '/';
-
         /// <summary>
-        /// Build a storage key using the creation time specified.
+        /// the delimiter shown in the blob name as the file path
         /// </summary>
-        /// <param name="blobCreationTime">The specified creation time</param>
-        /// <returns>The constructed storage key.</returns>
-        public static string BuildStorageKey(DateTime blobCreationTime)
-        {
-            string id = Guid.NewGuid().ToString("N");
-            return $"{BuildContainerNameSuffix("blob", blobCreationTime)}{KeyDelimiter}{id}";
-        }
+        public static readonly char BlobNameDelimiter = '/';
 
         /// <summary>
         /// Build a storage key for the message.

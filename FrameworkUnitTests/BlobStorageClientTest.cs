@@ -52,7 +52,7 @@ namespace FrameworkUnitTests
             string testContent = "test stream content";
             string key = "message-20101003|testBlobName";
             Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(testContent));
-            await blobStorageClient.UploadStreamBlob(key, stream);
+            await blobStorageClient.UploadStreamBlobAsync(key, stream);
 
             MemoryStream result = await blobStorageClient.DownloadStreamAsync(key) as MemoryStream;
             string resultString = Encoding.UTF8.GetString(result.ToArray());
@@ -66,12 +66,11 @@ namespace FrameworkUnitTests
             string key1 = "message-20150516|a";
             string key2 = "message-20150517|b";
             string key3 = "message-20150518|c";
-            string blobName = "testBlob";
 
             Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(testContent));
-            await blobStorageClient.UploadStreamBlob(key1, stream);
-            await blobStorageClient.UploadStreamBlob(key2, stream);
-            await blobStorageClient.UploadStreamBlob(key3, stream);
+            await blobStorageClient.UploadStreamBlobAsync(key1, stream);
+            await blobStorageClient.UploadStreamBlobAsync(key2, stream);
+            await blobStorageClient.UploadStreamBlobAsync(key3, stream);
 
             DateTime dateTime = new DateTime(2015, 05, 17);
             await blobStorageClient.DeleteExpiredContainersAsync(dateTime);
@@ -84,7 +83,7 @@ namespace FrameworkUnitTests
             Assert.IsTrue(sortedList[0].EndsWith("20150517"));
             Assert.IsTrue(sortedList[1].EndsWith("20150518"));
 
-            await blobStorageClient.DeleteAllContainersAsync();
+            await blobStorageClient.DeleteBlobStoreContainersAsync();
             containers = blobStorageClient.ListContainers().ToList();
             Assert.AreEqual(0, containers.Count);
         }

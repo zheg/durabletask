@@ -55,9 +55,9 @@ namespace DurableTask.Tracking
                 throw new ArgumentException("Invalid hub name", nameof(hubName));
             }
 
-            blobClient = CloudStorageAccount.Parse(connectionString).CreateCloudBlobClient();
-            blobClient.DefaultRequestOptions.RetryPolicy = new ExponentialRetry(DeltaBackOff, MaxRetries);
-            blobClient.DefaultRequestOptions.MaximumExecutionTime = MaximumExecutionTime;
+            this.blobClient = CloudStorageAccount.Parse(connectionString).CreateCloudBlobClient();
+            this.blobClient.DefaultRequestOptions.RetryPolicy = new ExponentialRetry(DeltaBackOff, MaxRetries);
+            this.blobClient.DefaultRequestOptions.MaximumExecutionTime = MaximumExecutionTime;
 
             // save the lower case since it will be used as the prefix of the container name,
             // which only allows lower case letters
@@ -70,12 +70,12 @@ namespace DurableTask.Tracking
         /// <param name="key">The key to uniquely locate and access the blob</param>
         /// <param name="stream">The stream to be uploaded</param>
         /// <returns></returns>
-        public async Task UploadStreamBlob(string key, Stream stream)
+        public async Task UploadStreamBlobAsync(string key, Stream stream)
         {
             string containerNameSuffix;
             string blobName;
             BlobStorageClientHelper.ParseKey(key, out containerNameSuffix, out blobName);
-            var cloudBlob = await GetCloudBlockBlobReferenceAsync(containerNameSuffix, blobName);
+            var cloudBlob = await this.GetCloudBlockBlobReferenceAsync(containerNameSuffix, blobName);
             await cloudBlob.UploadFromStreamAsync(stream);
         }
 
@@ -100,7 +100,7 @@ namespace DurableTask.Tracking
         async Task<ICloudBlob> GetCloudBlockBlobReferenceAsync(string containerNameSuffix, string blobName)
         {
             string containerName = BlobStorageClientHelper.BuildContainerName(hubName, containerNameSuffix);
-            var cloudBlobContainer = blobClient.GetContainerReference(containerName);
+            var cloudBlobContainer = this.blobClient.GetContainerReference(containerName);
             await cloudBlobContainer.CreateIfNotExistsAsync();
             return cloudBlobContainer.GetBlockBlobReference(blobName);
         }
@@ -111,7 +111,7 @@ namespace DurableTask.Tracking
         /// <returns>A list of Azure blob containers</returns>
         public IEnumerable<CloudBlobContainer> ListContainers()
         {
-            return blobClient.ListContainers(hubName);
+            return this.blobClient.ListContainers(this.hubName);
         }
 
         /// <summary>
@@ -127,12 +127,12 @@ namespace DurableTask.Tracking
         }
 
         /// <summary>
-        /// Delete all containers with the hub name as prefix.
+        /// Delete blob containers with the hub name as prefix.
         /// </summary>
         /// <returns></returns>
-        public async Task DeleteAllContainersAsync()
+        public async Task DeleteBlobStoreContainersAsync()
         {
-            IEnumerable<CloudBlobContainer> containers = ListContainers();
+            IEnumerable<CloudBlobContainer> containers = this.ListContainers();
             var tasks = containers.ToList().Select(container => container.DeleteIfExistsAsync());
             await Task.WhenAll(tasks);
         }

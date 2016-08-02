@@ -40,19 +40,6 @@ namespace FrameworkUnitTests
         }
 
         [TestMethod]
-        public void BuildStorageKeyTest()
-        {
-            DateTime messageFireTime = new DateTime(2015, 05, 17);
-            string key = BlobStorageClientHelper.BuildStorageKey(messageFireTime);
-            Regex regex = new Regex(@"blob-20150517|\w{32}$");
-            Assert.IsTrue(regex.Match(key).Success);
-
-            key = BlobStorageClientHelper.BuildStorageKey(DateTime.MinValue);
-            regex = new Regex(@"blob-\d{8}|\w{32}$");
-            Assert.IsTrue(regex.Match(key).Success);
-        }
-
-        [TestMethod]
         public void BuildMessageStorageKeyTest()
         {
             string instanceId = "aa";

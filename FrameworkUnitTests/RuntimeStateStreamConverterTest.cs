@@ -148,6 +148,7 @@ namespace FrameworkUnitTests
             catch (OrchestrationException e)
             {
                 // expected
+                Assert.IsTrue(e.Message.Contains("IOrchestrationServiceBlobStore"), "Exception must contain IOrchestrationServiceBlobStore.");
             }
         }
 
@@ -175,6 +176,7 @@ namespace FrameworkUnitTests
             catch (OrchestrationException e)
             {
                 // expected
+                Assert.IsTrue(e.Message.Contains("exceeded"), "Exception must contain exceeded.");
             }
         }
 

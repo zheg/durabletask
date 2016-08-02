@@ -22,12 +22,15 @@ namespace DurableTask.Tracking
     /// </summary>
     public class AzureStorageBlobStore : IOrchestrationServiceBlobStore
     {
+        /// <summary>
+        /// The client to access and manage the blob store
+        /// </summary>
         readonly BlobStorageClient blobClient;
 
         /// <summary>
         /// Creates a new AzureStorageBlobStore using the supplied hub name and connection string
         /// </summary>
-        /// <param name="hubName">The hubname for this store</param>
+        /// <param name="hubName">The hub name for this store</param>
         /// <param name="connectionString">Azure storage connection string</param>
         public AzureStorageBlobStore(string hubName, string connectionString)
         {
@@ -35,24 +38,13 @@ namespace DurableTask.Tracking
         }
 
         /// <summary>
-        /// Create a storage key based on the creation date.
-        /// This key will be used to save and load the stream in external storage when it is too large.
-        /// </summary>
-        /// <param name="creationDate">The creation date of the blob. Could be DateTime.MinValue if want to use current time.</param>
-        /// <returns>A storage key.</returns>
-        public string BuildStorageKey(DateTime creationDate)
-        {
-            return BlobStorageClientHelper.BuildStorageKey(creationDate);
-        }
-
-        /// <summary>
-        /// Create a storage key based on the orchestrationInstance.
+        /// Create a blob storage access key based on the orchestrationInstance.
         /// This key will be used to save and load the stream message in external storage when it is too large.
         /// </summary>
         /// <param name="orchestrationInstance">The orchestration instance.</param>
         /// <param name="messageFireTime">The message fire time.</param>
         /// <returns>The created storage key.</returns>
-        public string BuildMessageStorageKey(OrchestrationInstance orchestrationInstance, DateTime messageFireTime)
+        public string BuildMessageBlobKey(OrchestrationInstance orchestrationInstance, DateTime messageFireTime)
         {
             return BlobStorageClientHelper.BuildMessageStorageKey(
                 orchestrationInstance != null ? orchestrationInstance.InstanceId : "null",
@@ -61,12 +53,12 @@ namespace DurableTask.Tracking
         }
 
         /// <summary>
-        /// Create a storage key based on message session.
+        /// Create a blob storage access key based on message session.
         /// This key will be used to save and load the stream in external storage when it is too large.
         /// </summary>
         /// <param name="sessionId">The message session Id.</param>
         /// <returns>A storage key.</returns>
-        public string BuildSessionStorageKey(string sessionId)
+        public string BuildSessionBlobKey(string sessionId)
         {
             return BlobStorageClientHelper.BuildSessionStorageKey(sessionId);
         }
@@ -74,22 +66,22 @@ namespace DurableTask.Tracking
         /// <summary>
         /// Save the stream of the message or seesion using key.
         /// </summary>
-        /// <param name="key">The storage key.</param>
+        /// <param name="blobKey">The blob storage key.</param>
         /// <param name="stream">The stream of the message or session.</param>
         /// <returns></returns>
-        public async Task SaveStreamAsync(string key, Stream stream)
+        public async Task SaveStreamAsync(string blobKey, Stream stream)
         {
-            await this.blobClient.UploadStreamBlob(key, stream);
+            await this.blobClient.UploadStreamBlobAsync(blobKey, stream);
         }
 
         /// <summary>
         /// Load the stream of message or seesion from storage using key.
         /// </summary>
-        /// <param name="key">Teh storage key.</param>
+        /// <param name="blobKey">The blob storage key.</param>
         /// <returns>The saved stream message or session.</returns>
-        public async Task<Stream> LoadStreamAsync(string key)
+        public async Task<Stream> LoadStreamAsync(string blobKey)
         {
-            return await this.blobClient.DownloadStreamAsync(key);
+            return await this.blobClient.DownloadStreamAsync(blobKey);
         }
 
         /// <summary>
@@ -97,7 +89,7 @@ namespace DurableTask.Tracking
         /// </summary>
         public async Task DeleteStoreAsync()
         {
-            await this.blobClient.DeleteAllContainersAsync();
+            await this.blobClient.DeleteBlobStoreContainersAsync();
         }
 
         /// <summary>
