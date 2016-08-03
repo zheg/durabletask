@@ -27,11 +27,11 @@ namespace DurableTask.Tracking
     /// </summary>
     public class BlobStorageClient
     {
-        // use hubName as the container prefix. 
-        // the container full name is in the format of {hubName}-{streamType}-{DateTime};
+        // container prefix is in the format of {hubName}-dtfx. It is not part of the blob storage key.
+        // the container full name is in the format of {hubName}-dtfx-{streamType}-{DateTime};
         // the streamType is the type of the stream, either 'message' or 'session';
         // the date time is in the format of yyyyMMdd.
-        readonly string hubName;
+        readonly string containerNamePrefix;
         readonly CloudBlobClient blobClient;
 
         const int MaxRetries = 3;
@@ -59,9 +59,9 @@ namespace DurableTask.Tracking
             this.blobClient.DefaultRequestOptions.RetryPolicy = new ExponentialRetry(DeltaBackOff, MaxRetries);
             this.blobClient.DefaultRequestOptions.MaximumExecutionTime = MaximumExecutionTime;
 
-            // save the lower case since it will be used as the prefix of the container name,
+            // make the hub name lower case since it will be used as part of the prefix of the container name,
             // which only allows lower case letters
-            this.hubName = hubName.ToLower();
+            this.containerNamePrefix = BlobStorageClientHelper.BuildContainerNamePrefix(hubName.ToLower());
         }
 
         /// <summary>
@@ -99,19 +99,19 @@ namespace DurableTask.Tracking
 
         async Task<ICloudBlob> GetCloudBlockBlobReferenceAsync(string containerNameSuffix, string blobName)
         {
-            string containerName = BlobStorageClientHelper.BuildContainerName(hubName, containerNameSuffix);
+            string containerName = BlobStorageClientHelper.BuildContainerName(this.containerNamePrefix, containerNameSuffix);
             var cloudBlobContainer = this.blobClient.GetContainerReference(containerName);
             await cloudBlobContainer.CreateIfNotExistsAsync();
             return cloudBlobContainer.GetBlockBlobReference(blobName);
         }
 
         /// <summary>
-        /// List all containers of the blob storage, whose prefix is hub name.
+        /// List all containers of the blob storage, whose prefix is containerNamePrefix, i.e., {hubName}-dtfx.
         /// </summary>
         /// <returns>A list of Azure blob containers</returns>
         public IEnumerable<CloudBlobContainer> ListContainers()
         {
-            return this.blobClient.ListContainers(this.hubName);
+            return this.blobClient.ListContainers(this.containerNamePrefix);
         }
 
         /// <summary>
@@ -127,7 +127,7 @@ namespace DurableTask.Tracking
         }
 
         /// <summary>
-        /// Delete blob containers with the hub name as prefix.
+        /// Delete blob containers with the containerNamePrefix as prefix.
         /// </summary>
         /// <returns></returns>
         public async Task DeleteBlobStoreContainersAsync()

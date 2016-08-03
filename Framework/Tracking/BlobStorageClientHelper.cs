@@ -62,6 +62,18 @@ namespace DurableTask.Tracking
         }
 
         /// <summary>
+        /// Build the container name prefix using the lower case hub name.
+        /// It is in the format of {hubName}-dtfx.
+        /// The container name prefix is not part of the generated storage key.
+        /// </summary>
+        /// <param name="hubName">The hub name. Converted to lower case to build the prefix.</param>
+        /// <returns>The container name prefix</returns>
+        public static string BuildContainerNamePrefix(string hubName)
+        {
+            return $"{hubName.ToLower()}{ContainerNameDelimiter}dtfx";
+        }
+
+        /// <summary>
         /// Build a storage key for the session.
         /// </summary>
         /// <param name="sessionId">The session Id</param>
@@ -98,7 +110,7 @@ namespace DurableTask.Tracking
             string[] segments = key.Split(new[] {BlobStorageClientHelper.KeyDelimiter}, 2);
             if (segments.Length < 2)
             {
-                throw new ArgumentException("storage key {key} does not contain required 2 or more segments: containerNameSuffix|blobName.", nameof(key));
+                throw new ArgumentException($"storage key {key} does not contain required 2 or more segments: containerNameSuffix|blobName.", nameof(key));
             }
 
             containerNameSuffix = segments[0];
@@ -134,11 +146,11 @@ namespace DurableTask.Tracking
         public static bool IsContainerExpired(string containerName, DateTime thresholdDateTimeUtc)
         {
             string[] segments = containerName.Split(ContainerNameDelimiter);
-            if (segments.Length != 3)
+            if (segments.Length != 4)
             {
                 TraceHelper.Trace(
                     TraceEventType.Warning,
-                    $"container name {containerName} does not contain required 3 segments.");
+                    $"container name {containerName} does not contain required 4 segments.");
 
                 return false;
             }

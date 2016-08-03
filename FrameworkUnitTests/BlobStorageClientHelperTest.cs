@@ -26,14 +26,14 @@ namespace FrameworkUnitTests
         {
             Assert.AreEqual("ab-cd", BlobStorageClientHelper.BuildContainerName("ab", "cd"));
 
-            Assert.IsTrue(BlobStorageClientHelper.IsContainerExpired("hubName-message-20100101", DateTime.UtcNow));
-            Assert.IsFalse(BlobStorageClientHelper.IsContainerExpired("hubName-session-20990101", DateTime.UtcNow));
+            Assert.IsTrue(BlobStorageClientHelper.IsContainerExpired("hubname-dtfx-message-20100101", DateTime.UtcNow));
+            Assert.IsFalse(BlobStorageClientHelper.IsContainerExpired("hubname-dtfx-session-20990101", DateTime.UtcNow));
 
             DateTime dateTime = new DateTime(2015, 05, 17);
-            Assert.IsTrue(BlobStorageClientHelper.IsContainerExpired("hubName-message-20150516", dateTime));
-            Assert.IsFalse(BlobStorageClientHelper.IsContainerExpired("hubName-message-20150517", dateTime));
-            Assert.IsFalse(BlobStorageClientHelper.IsContainerExpired("hubName-message-20150518", dateTime));
-            Assert.IsTrue(BlobStorageClientHelper.IsContainerExpired("hubName-message-20140518", dateTime));
+            Assert.IsTrue(BlobStorageClientHelper.IsContainerExpired("hubname-dtfx-message-20150516", dateTime));
+            Assert.IsFalse(BlobStorageClientHelper.IsContainerExpired("hubname-dtfx-message-20150517", dateTime));
+            Assert.IsFalse(BlobStorageClientHelper.IsContainerExpired("hubname-dtfx-message-20150518", dateTime));
+            Assert.IsTrue(BlobStorageClientHelper.IsContainerExpired("hubname-dtfx-message-20140518", dateTime));
 
             // invalid containers are ignored
             Assert.IsFalse(BlobStorageClientHelper.IsContainerExpired("invalidContainerName", DateTime.UtcNow));
@@ -61,6 +61,14 @@ namespace FrameworkUnitTests
             string key = BlobStorageClientHelper.BuildSessionStorageKey(sessionId);
             Regex regex = new Regex(@"^session-\d{8}|abc/\w{32}$");
             Assert.IsTrue(regex.Match(key).Success);
+        }
+
+        [TestMethod]
+        public void BuildContainerNamePrefixTest()
+        {
+            string hubName = "HubName";
+            string containerNamePrefix = BlobStorageClientHelper.BuildContainerNamePrefix(hubName);
+            Assert.AreEqual("hubname-dtfx", containerNamePrefix);
         }
 
         [TestMethod]
@@ -92,7 +100,7 @@ namespace FrameworkUnitTests
             }
             catch (ArgumentException e)
             {
-                Assert.IsTrue(e.Message.Contains("containerNameSuffix"), "Exception must contain containerNameSuffix.");
+                Assert.IsTrue(e.Message.Contains("Message-20100319"), "Exception must contain the invalid container name suffix.");
             }
         }
     }
