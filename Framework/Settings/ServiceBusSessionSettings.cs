@@ -18,11 +18,10 @@ namespace DurableTask.Settings
     ///     TODO: add a flag OverflowEnabled to indicate if the overflow settings are enabled
     /// </summary>
     public class ServiceBusSessionSettings
-    {     
-        internal ServiceBusSessionSettings()
+    {
+        internal ServiceBusSessionSettings() :
+            this (FrameworkConstants.SessionOverflowThresholdInBytesDefault, FrameworkConstants.SessionMaxSizeInBytesDefault)
         {
-            SessionOverflowThresholdInBytes = 230 * 1024;
-            SessionMaxSizeInBytes = 10 * 1024 * 1024;
         }
 
         internal ServiceBusSessionSettings(int sessionOverflowThresholdInBytes, int sessionMaxSizeInBytes)

@@ -18,7 +18,7 @@ namespace DurableTask
 
     /// <summary>
     /// The object that represents the serialized session state.
-    /// It holds a list of history events (when storage key is empty),
+    /// It holds a list of history events (when blob key is empty),
     /// or a key for external storage if the serialized stream is too large to fit into the the session state.
     /// </summary>
     internal class OrchestrationSessionState
@@ -40,12 +40,12 @@ namespace DurableTask
         }
 
         /// <summary>
-        /// Construct an OrchestrationSessionState instance with a storage key as the blob reference in the external blob storage.
+        /// Construct an OrchestrationSessionState instance with a blob key as the blob reference in the external blob storage.
         /// </summary>
-        /// /// <param name="storageKey"></param>
-        public OrchestrationSessionState(string storageKey)
+        /// /// <param name="blobKey">The blob key to access the blob</param>
+        public OrchestrationSessionState(string blobKey)
         {
-            this.StorageKey = storageKey;
+            this.BlobKey = blobKey;
         }
 
         /// <summary>
@@ -54,8 +54,8 @@ namespace DurableTask
         public IList<HistoryEvent> Events { get; set; }
 
         /// <summary>
-        /// The storage key for external storage. Could be null or empty if not externally stored.
+        /// The blob key for external storage. Could be null or empty if not externally stored.
         /// </summary>
-        public string StorageKey { get; set; }
+        public string BlobKey { get; set; }
     }
 }

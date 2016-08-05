@@ -46,7 +46,7 @@ namespace DurableTask
         // This also has an impact on prefetch count as PrefetchCount cannot be greater than this value
         // as every fetched message also creates a tracking message which counts towards this limit.
         const int MaxMessageCount = 80;
-        const int SessionStreamWarningSizeInBytes = 200 * 1024;
+        const int SessionStreamWarningSizeInBytes = 150 * 1024;
         const int StatusPollingIntervalInSeconds = 2;
         const int DuplicateDetectionWindowInHours = 4;
 
@@ -444,7 +444,7 @@ namespace DurableTask
             IList<TaskMessage> newTaskMessages = await Task.WhenAll(
                 newMessages.Select(async message => await ServiceBusUtils.GetObjectFromBrokeredMessageAsync<TaskMessage>(message, this.BlobStore)));
 
-            OrchestrationRuntimeState runtimeState = await GetSessionState(session, this.BlobStore);
+            OrchestrationRuntimeState runtimeState = await GetSessionStateAsync(session, this.BlobStore);
 
             long maxSequenceNumber = newMessages
                 .OrderByDescending(message => message.SequenceNumber)
@@ -597,7 +597,7 @@ namespace DurableTask
                         Transaction.Current.TransactionInformation.LocalIdentifier
                         }");
 
-                if (await TrySetSessionState(workItem, newOrchestrationRuntimeState, runtimeState, session))
+                if (await TrySetSessionStateAsync(workItem, newOrchestrationRuntimeState, runtimeState, session))
                 {
                     if (runtimeState.CompressedSize > SessionStreamWarningSizeInBytes && runtimeState.CompressedSize < Settings.SessionSettings.SessionOverflowThresholdInBytes)
                     {
@@ -611,8 +611,8 @@ namespace DurableTask
                     if (outboundMessages?.Count > 0)
                     {
                         await workerSender.SendBatchAsync(
-                            await Task.WhenAll(outboundMessages.Select(async m =>
-                            await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
+                            await Task.WhenAll(outboundMessages.Select(m =>
+                            ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                                 m,
                                 Settings.MessageCompressionSettings,
                                 Settings.MessageSettings,
@@ -652,8 +652,8 @@ namespace DurableTask
                     if (orchestratorMessages?.Count > 0)
                     {
                         await orchestratorQueueClient.SendBatchAsync(
-                            await Task.WhenAll(orchestratorMessages.Select(async m =>
-                                await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
+                            await Task.WhenAll(orchestratorMessages.Select(m =>
+                                ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                                 m,
                                 Settings.MessageCompressionSettings,
                                 Settings.MessageSettings,
@@ -1362,7 +1362,7 @@ namespace DurableTask
             return input;
         }
 
-        async Task<OrchestrationRuntimeState> GetSessionState(MessageSession session, IOrchestrationServiceBlobStore orchestrationServiceBlobStore)
+        async Task<OrchestrationRuntimeState> GetSessionStateAsync(MessageSession session, IOrchestrationServiceBlobStore orchestrationServiceBlobStore)
         {
             using (Stream rawSessionStream = await session.GetStateAsync())
             {
@@ -1372,7 +1372,7 @@ namespace DurableTask
 			    
         }
 
-        async Task<bool> TrySetSessionState(
+        async Task<bool> TrySetSessionStateAsync(
             TaskOrchestrationWorkItem workItem,
             OrchestrationRuntimeState newOrchestrationRuntimeState,
             OrchestrationRuntimeState runtimeState,
@@ -1504,7 +1504,7 @@ namespace DurableTask
             await namespaceManager.CreateQueueAsync(description);
         }
 
-        async Task<BrokeredMessage> CreateForcedTerminateMessageAsync(string instanceId, string reason)
+        Task<BrokeredMessage> CreateForcedTerminateMessageAsync(string instanceId, string reason)
         {
             var newOrchestrationInstance = new OrchestrationInstance { InstanceId = instanceId };
             var taskMessage = new TaskMessage
@@ -1513,7 +1513,7 @@ namespace DurableTask
                 Event = new ExecutionTerminatedEvent(-1, reason)
             };
 
-            BrokeredMessage message = await ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
+            return ServiceBusUtils.GetBrokeredMessageFromObjectAsync(
                 taskMessage,
                 Settings.MessageCompressionSettings,
                 Settings.MessageSettings,
@@ -1521,8 +1521,6 @@ namespace DurableTask
                 "Forced Terminate",
                 this.BlobStore,
                 DateTime.MinValue);
-
-            return message;
         }
 
         void ThrowIfInstanceStoreNotConfigured()

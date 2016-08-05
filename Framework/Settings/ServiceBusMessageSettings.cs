@@ -19,10 +19,10 @@ namespace DurableTask.Settings
     /// </summary>
     public class ServiceBusMessageSettings
     {
-        internal ServiceBusMessageSettings()
+
+        internal ServiceBusMessageSettings() :
+            this(FrameworkConstants.MessageOverflowThresholdInBytesDefault, FrameworkConstants.MessageMaxSizeInBytesDefault)
         {
-            MessageOverflowThresholdInBytes = 170 * 1024;
-            MessageMaxSizeInBytes = 10 * 1024 * 1024;
         }
 
         internal ServiceBusMessageSettings(int messageOverflowThresholdInBytes, int messageMaxSizeInBytes)

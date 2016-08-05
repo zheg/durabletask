@@ -27,7 +27,7 @@ namespace DurableTask.Tracking
     /// </summary>
     public class BlobStorageClient
     {
-        // container prefix is in the format of {hubName}-dtfx. It is not part of the blob storage key.
+        // container prefix is in the format of {hubName}-dtfx. It is not part of the blob key.
         // the container full name is in the format of {hubName}-dtfx-{streamType}-{DateTime};
         // the streamType is the type of the stream, either 'message' or 'session';
         // the date time is in the format of yyyyMMdd.

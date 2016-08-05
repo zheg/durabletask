@@ -30,7 +30,7 @@ namespace DurableTask.Tracking
         /// </summary>
         /// <param name="orchestrationInstance">The orchestration instance.</param>
         /// <param name="messageFireTime">The message fire time. Could be DateTime.MinValue.</param>
-        /// <returns>A message storage key.</returns>
+        /// <returns>A message blob key.</returns>
         string BuildMessageBlobKey(OrchestrationInstance orchestrationInstance, DateTime messageFireTime);
 
         /// <summary>
@@ -38,13 +38,13 @@ namespace DurableTask.Tracking
         /// This key will be used to save and load the stream in external storage when it is too large.
         /// </summary>
         /// <param name="sessionId">The message session Id.</param>
-        /// <returns>A storage key.</returns>
+        /// <returns>A blob key.</returns>
         string BuildSessionBlobKey(string sessionId);
 
         /// <summary>
         /// Save the stream of the message or seesion using key.
         /// </summary>
-        /// <param name="blobKey">The blob storage key.</param>
+        /// <param name="blobKey">The blob key.</param>
         /// <param name="stream">The stream of the message or session.</param>
         /// <returns></returns>
         Task SaveStreamAsync(string blobKey, Stream stream);
@@ -52,7 +52,7 @@ namespace DurableTask.Tracking
         /// <summary>
         /// Load the stream of message or seesion from storage using key.
         /// </summary>
-        /// <param name="blobKey">The blob storage key.</param>
+        /// <param name="blobKey">The blob key.</param>
         /// <returns>The saved stream message or session.</returns>
         Task<Stream> LoadStreamAsync(string blobKey);
 

@@ -37,28 +37,29 @@ namespace FrameworkUnitTests
 
             // invalid containers are ignored
             Assert.IsFalse(BlobStorageClientHelper.IsContainerExpired("invalidContainerName", DateTime.UtcNow));
+            Assert.IsFalse(BlobStorageClientHelper.IsContainerExpired("hubname-dtfx-message-20146789", DateTime.UtcNow));
         }
 
         [TestMethod]
-        public void BuildMessageStorageKeyTest()
+        public void BuildMessageBlobKeyTest()
         {
             string instanceId = "aa";
             string executionId = "bb";
             DateTime messageFireTime = new DateTime(2015, 05, 17);
-            string key = BlobStorageClientHelper.BuildMessageStorageKey(instanceId, executionId, messageFireTime);
+            string key = BlobStorageClientHelper.BuildMessageBlobKey(instanceId, executionId, messageFireTime);
             Regex regex = new Regex(@"message-20150517|aa/bb/\w{32}$");
             Assert.IsTrue(regex.Match(key).Success);
 
-            key = BlobStorageClientHelper.BuildMessageStorageKey(instanceId, executionId, DateTime.MinValue);
+            key = BlobStorageClientHelper.BuildMessageBlobKey(instanceId, executionId, DateTime.MinValue);
             regex = new Regex(@"message-\d{8}|aa/bb/\w{32}$");
             Assert.IsTrue(regex.Match(key).Success);
         }
 
         [TestMethod]
-        public void BuildSessionStorageKeyTest()
+        public void BuildSessionBlobKeyTest()
         {
             string sessionId = "abc";
-            string key = BlobStorageClientHelper.BuildSessionStorageKey(sessionId);
+            string key = BlobStorageClientHelper.BuildSessionBlobKey(sessionId);
             Regex regex = new Regex(@"^session-\d{8}|abc/\w{32}$");
             Assert.IsTrue(regex.Match(key).Success);
         }

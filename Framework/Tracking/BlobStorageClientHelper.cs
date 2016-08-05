@@ -11,6 +11,8 @@
 //  limitations under the License.
 //  ----------------------------------------------------------------------------------
 
+using System.Globalization;
+
 namespace DurableTask.Tracking
 {
     using System;
@@ -37,13 +39,13 @@ namespace DurableTask.Tracking
         public static readonly char BlobNameDelimiter = '/';
 
         /// <summary>
-        /// Build a storage key for the message.
+        /// Build a blob key for the message.
         /// </summary>
         /// <param name="instanceId">The orchestration instance Id</param>
         /// <param name="executionId">The orchestration execution Id</param>
         /// <param name="messageFireTime">The message fire time. If it is DateTime.MinValue, use current date.</param>
-        /// <returns>The constructed storage key for message</returns>
-        public static string BuildMessageStorageKey(string instanceId, string executionId, DateTime messageFireTime)
+        /// <returns>The constructed blob key for message</returns>
+        public static string BuildMessageBlobKey(string instanceId, string executionId, DateTime messageFireTime)
         {
             string id = Guid.NewGuid().ToString("N");
             return string.Format(
@@ -64,7 +66,7 @@ namespace DurableTask.Tracking
         /// <summary>
         /// Build the container name prefix using the lower case hub name.
         /// It is in the format of {hubName}-dtfx.
-        /// The container name prefix is not part of the generated storage key.
+        /// The container name prefix is not part of the generated blob key.
         /// </summary>
         /// <param name="hubName">The hub name. Converted to lower case to build the prefix.</param>
         /// <returns>The container name prefix</returns>
@@ -74,11 +76,11 @@ namespace DurableTask.Tracking
         }
 
         /// <summary>
-        /// Build a storage key for the session.
+        /// Build a blob key for the session.
         /// </summary>
         /// <param name="sessionId">The session Id</param>
-        /// <returns>The constructed storage key for session</returns>
-        public static string BuildSessionStorageKey(string sessionId)
+        /// <returns>The constructed blob key for session</returns>
+        public static string BuildSessionBlobKey(string sessionId)
         {
             string id = Guid.NewGuid().ToString("N");
             return string.Format(
@@ -102,7 +104,7 @@ namespace DurableTask.Tracking
         /// <summary>
         /// Parse the key for the container name suffix and the blob name.
         /// </summary>
-        /// <param name="key">The input storage key</param>
+        /// <param name="key">The input blob key</param>
         /// <param name="containerNameSuffix">The parsed container name suffix as output</param>
         /// <param name="blobName">The parsed blob name as output</param>
         public static void ParseKey(string key, out string containerNameSuffix, out string blobName)
@@ -110,7 +112,7 @@ namespace DurableTask.Tracking
             string[] segments = key.Split(new[] {BlobStorageClientHelper.KeyDelimiter}, 2);
             if (segments.Length < 2)
             {
-                throw new ArgumentException($"storage key {key} does not contain required 2 or more segments: containerNameSuffix|blobName.", nameof(key));
+                throw new ArgumentException($"Blob key {key} does not contain required 2 or more segments: containerNameSuffix|blobName.", nameof(key));
             }
 
             containerNameSuffix = segments[0];
@@ -150,12 +152,29 @@ namespace DurableTask.Tracking
             {
                 TraceHelper.Trace(
                     TraceEventType.Warning,
-                    $"container name {containerName} does not contain required 4 segments.");
+                    $"Container name {containerName} does not contain required 4 segments. Container {containerName} is ignored.");
 
                 return false;
             }
 
-            DateTime containerDateTime = DateTime.ParseExact(segments[segments.Length - 1], DateFormat, System.Globalization.CultureInfo.InvariantCulture);
+            DateTime containerDateTime;
+            string dateString = segments[segments.Length - 1];
+            bool parseSucceeded = DateTime.TryParseExact(
+                dateString,
+                DateFormat,
+                System.Globalization.CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out containerDateTime);
+
+            if (!parseSucceeded)
+            {
+                TraceHelper.Trace(
+                    TraceEventType.Warning,
+                    $"Cannot parse the the date string {dateString} in the format of yyyyMMdd. Container {containerName} is ignored.");
+
+                return false;
+            }
+
             return containerDateTime < thresholdDateTimeUtc;
         }
 
